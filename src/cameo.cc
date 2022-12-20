@@ -14,6 +14,9 @@ OS_TRANSPARENT_MANAGEMENT::OS_TRANSPARENT_MANAGEMENT(COUNTER_WIDTH threshold, ui
     line_location_table(*(new std::vector<LOCATION_TABLE_ENTRY_WIDTH>(fast_memory_max_address >> DATA_MANAGEMENT_OFFSET_BITS, LOCATION_TABLE_ENTRY_DEFAULT_VALUE)))
 {
     remapping_request_queue_congestion = 0;
+#if (PRINT_SWAP_DETAIL)
+    swap_request = 0;
+#endif // PRINT_SWAP_DETAIL
 
     uint64_t expected_number_in_congruence_group = total_capacity / fast_memory_capacity;
     if (expected_number_in_congruence_group > REMAPPING_LOCATION_WIDTH(RemappingLocation::Max))
@@ -30,6 +33,11 @@ OS_TRANSPARENT_MANAGEMENT::OS_TRANSPARENT_MANAGEMENT(COUNTER_WIDTH threshold, ui
 OS_TRANSPARENT_MANAGEMENT::~OS_TRANSPARENT_MANAGEMENT()
 {
     outputchampsimstatistics.remapping_request_queue_congestion = remapping_request_queue_congestion;
+
+#if (PRINT_SWAP_DETAIL)
+    outputchampsimstatistics.swap_request = swap_request;
+#endif // PRINT_SWAP_DETAIL
+
     delete& counter_table;
     delete& hotness_table;
     delete& line_location_table;
@@ -37,6 +45,14 @@ OS_TRANSPARENT_MANAGEMENT::~OS_TRANSPARENT_MANAGEMENT()
 
 bool OS_TRANSPARENT_MANAGEMENT::memory_activity_tracking(uint64_t address, uint8_t type, float queue_busy_degree)
 {
+
+#if (ACTIVITY_WRITE_IGNORE)
+    if (type == 2) // 
+    {
+        return true;
+    }
+#endif // ACTIVITY_WRITE_IGNORE
+
     if (address >= total_capacity)
     {
         std::cout << __func__ << ": address input error." << std::endl;
@@ -305,6 +321,9 @@ bool OS_TRANSPARENT_MANAGEMENT::enqueue_remapping_request(RemappingRequest& rema
     }
 
     // new remapping request is issued.
+#if (PRINT_SWAP_DETAIL)
+    swap_request++;
+#endif
     return true;
 }
 

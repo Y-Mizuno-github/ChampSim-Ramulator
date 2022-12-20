@@ -7,6 +7,8 @@
 #define DEBUG_PRINTF (ENABLE)
 #define USER_CODES   (ENABLE)
 
+#define PRINT_SWAP_DETAIL  (ENABLE) // print swap detail (number of swap only now) into statistics file.
+
 /* Functionality options */
 #if (USER_CODES == ENABLE)
 #define USE_OPENMP                                 (ENABLE) // whether use OpenMP to speedup the simulation
@@ -14,7 +16,7 @@
 #define MEMORY_USE_HYBRID                          (ENABLE) // whether use hybrid memory system instead of single memory systems
 #define PRINT_STATISTICS_INTO_FILE                 (ENABLE) // whether print simulation statistics into files
 #define PRINT_MEMORY_TRACE                         (DISABLE) // whether print memory trace into files
-#define MEMORY_USE_SWAPPING_UNIT                   (DISABLE) // whether memory controller uses swapping unit to swap data (data swapping overhead is considered)
+#define MEMORY_USE_SWAPPING_UNIT                   (ENABLE) // whether memory controller uses swapping unit to swap data (data swapping overhead is considered)
 #define MEMORY_USE_OS_TRANSPARENT_MANAGEMENT       (ENABLE) // whether memory controller uses OS-transparent management designs to simulate the memory system instead of static (no-migration) methods
 
 #if (MEMORY_USE_HYBRID == ENABLE)
@@ -37,8 +39,9 @@
 
 #if (MEMORY_USE_OS_TRANSPARENT_MANAGEMENT == ENABLE)
 #define IDEAL_LINE_LOCATION_TABLE             (DISABLE)
-#define COLOCATED_LINE_LOCATION_TABLE         (DISABLE)
-#define IDEAL_MULTIPLE_GRANULARITY            (ENABLE)
+#define COLOCATED_LINE_LOCATION_TABLE         (ENABLE)
+#define IDEAL_MULTIPLE_GRANULARITY            (DISABLE)
+#define ACTIVITY_WRITE_IGNORE                 (DISABLE)
 
 #define TEST_OS_TRANSPARENT_MANAGEMENT        (DISABLE)
 
@@ -69,7 +72,7 @@
 #define DATA_GRANULARITY_4096B              (4096u)
 
 #if (IDEAL_LINE_LOCATION_TABLE == ENABLE) || (COLOCATED_LINE_LOCATION_TABLE == ENABLE)
-#define DATA_MANAGEMENT_GRANULARITY         (DATA_GRANULARITY_4096B)  // default: DATA_GRANULARITY_64B
+#define DATA_MANAGEMENT_GRANULARITY         (DATA_GRANULARITY_64B)  // default: DATA_GRANULARITY_64B
 #elif (IDEAL_MULTIPLE_GRANULARITY == ENABLE)
 #define DATA_MANAGEMENT_GRANULARITY         (DATA_GRANULARITY_4096B)
 #define DATA_LINE_OFFSET_BITS               (lg2(DATA_GRANULARITY_64B))
@@ -192,6 +195,9 @@ typedef struct
     uint64_t unexpandable_since_start_address;
     uint64_t unexpandable_since_no_invalid_group;
     uint64_t data_eviction_success, data_eviction_failure;
+#if (PRINT_SWAP_DETAIL)
+    uint64_t swap_request;
+#endif // PRINT_SWAP_DETAIL
 
 } OutputChampSimStatisticsFileType;
 

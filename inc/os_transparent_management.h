@@ -102,6 +102,10 @@ public:
     std::deque<RemappingRequest> remapping_request_queue;
     uint64_t remapping_request_queue_congestion;
 
+#if (PRINT_SWAP_DETAIL)
+    uint64_t swap_request;
+#endif // PRINT_SWAP_DETAIL
+
 #if (IDEAL_LINE_LOCATION_TABLE == ENABLE) || (COLOCATED_LINE_LOCATION_TABLE == ENABLE)
     // scoped enumerations
     enum class RemappingLocation : REMAPPING_LOCATION_WIDTH
@@ -228,6 +232,11 @@ public:
     // detect cold data block
     void cold_data_detection();
 
+#if (COLOCATED_LINE_LOCATION_TABLE == ENABLE)
+    bool finish_fm_access_in_incomplete_read_request_queue(uint64_t h_address);
+    bool finish_fm_access_in_incomplete_write_request_queue(uint64_t h_address);
+#endif  // COLOCATED_LINE_LOCATION_TABLE
+
 private:
     // evict cold data block
     bool cold_data_eviction(uint64_t source_address, float queue_busy_degree);
@@ -235,10 +244,6 @@ private:
     // add new remapping request into the remapping_request_queue
     bool enqueue_remapping_request(RemappingRequest& remapping_request);
 
-#if (COLOCATED_LINE_LOCATION_TABLE == ENABLE)
-    bool finish_fm_access_in_incomplete_read_request_queue(uint64_t h_address);
-    bool finish_fm_access_in_incomplete_write_request_queue(uint64_t h_address);
-#endif  // COLOCATED_LINE_LOCATION_TABLE
 #if (IDEAL_MULTIPLE_GRANULARITY == ENABLE)
     // calculate the migration granularity based on start_address and end_address.
     MIGRATION_GRANULARITY_WIDTH calculate_migration_granularity(const START_ADDRESS_WIDTH start_address, const START_ADDRESS_WIDTH end_address);
