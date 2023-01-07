@@ -19,7 +19,7 @@ class PACKET
 public:
   bool scheduled = false;
 
-  uint8_t asid[2] = {std::numeric_limits<uint8_t>::max(), std::numeric_limits<uint8_t>::max()}, type = 0, fill_level = 0, pf_origin_level = 0;
+  uint8_t asid[2] = {std::numeric_limits<uint8_t>::max(), std::numeric_limits<uint8_t>::max()}, type = 0, type_origin = 0, fill_level = 0, pf_origin_level = 0;
 
   uint32_t pf_metadata;
   uint32_t cpu = NUM_CPUS;

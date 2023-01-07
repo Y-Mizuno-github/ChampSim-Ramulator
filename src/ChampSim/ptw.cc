@@ -67,13 +67,14 @@ void PageTableWalker::handle_read()
     packet.v_address = handle_pkt.address;
     packet.cpu = cpu;
     packet.type = TRANSLATION;
+    packet.type_origin = TRANSLATION;
     packet.init_translation_level = ptw_level;
     packet.translation_level = packet.init_translation_level;
     packet.to_return = {this};
 
     int rq_index = lower_level->add_rq(&packet);
     if (rq_index == -2)
-      return;
+      return; // cannot handle this request (RQ is full).
 
     packet.to_return = handle_pkt.to_return; // Set the return for MSHR packet same as read packet.
     packet.type = handle_pkt.type;
@@ -162,6 +163,7 @@ void PageTableWalker::handle_fill()
         PACKET packet = *fill_mshr;
         packet.cpu = cpu;
         packet.type = TRANSLATION;
+        packet.type_origin = TRANSLATION;
         packet.address = addr;
         packet.to_return = {this};
         packet.translation_level = fill_mshr->translation_level - 1;

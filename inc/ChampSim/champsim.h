@@ -12,6 +12,9 @@
 
 // USEFUL MACROS
 //#define DEBUG_PRINT
+//#define DEBUG_PRINT_SQ
+//#define DEBUG_MISS
+//#define DEBUG_WQ
 #define SANITY_CHECK
 #define LLC_BYPASS
 #define DRC_BYPASS
@@ -21,6 +24,24 @@
 #define DP(x) x
 #else
 #define DP(x)
+#endif
+
+#ifdef DEBUG_PRINT_SQ
+#define DP_SQ(x) x
+#else
+#define DP_SQ(x)
+#endif
+
+#ifdef DEBUG_MISS
+#define DP_MISS(x) x
+#else
+#define DP_MISS(x)
+#endif
+
+#ifdef DEBUG_WQ
+#define DP_WQ(x) x
+#else
+#define DP_WQ(x)
 #endif
 
 // CACHE

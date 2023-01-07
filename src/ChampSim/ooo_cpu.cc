@@ -354,6 +354,7 @@ void O3_CPU::do_translate_fetch(champsim::circular_buffer<ooo_model_instr>::iter
   trace_packet.instr_id = begin->instr_id;
   trace_packet.ip = begin->ip;
   trace_packet.type = LOAD;
+  trace_packet.type_origin = LOAD;
   trace_packet.asid[0] = 0;
   trace_packet.asid[1] = 0;
   trace_packet.to_return = {&ITLB_bus};
@@ -412,6 +413,7 @@ void O3_CPU::do_fetch_instruction(champsim::circular_buffer<ooo_model_instr>::it
   fetch_packet.instr_id = begin->instr_id;
   fetch_packet.ip = begin->ip;
   fetch_packet.type = LOAD;
+  fetch_packet.type_origin = LOAD;
   fetch_packet.asid[0] = 0;
   fetch_packet.asid[1] = 0;
   fetch_packet.to_return = {&L1I_bus};
@@ -831,6 +833,13 @@ void O3_CPU::add_store_queue(champsim::circular_buffer<ooo_model_instr>::iterato
     std::cout << " is added in the SQ translated: " << +sq_it->translated << " fetched: " << +sq_it->fetched;
     std::cout << " cycle: " << current_cycle << std::endl;
   });
+
+  DP_MISS(if (warmup_complete[cpu])
+  {
+    std::cout << "[SQ] " << __func__ << " instr_id: " << sq_it->instr_id;
+    std::cout << " is added in the SQ translated: " << +sq_it->translated << " fetched: " << +sq_it->fetched;
+    std::cout << " cycle: " << current_cycle << std::endl;
+  });
 }
 
 void O3_CPU::operate_lsq()
@@ -896,6 +905,7 @@ int O3_CPU::do_translate_store(std::vector<LSQ_ENTRY>::iterator sq_it)
   data_packet.instr_id = sq_it->instr_id;
   data_packet.ip = sq_it->ip;
   data_packet.type = RFO;
+  data_packet.type_origin = RFO;
   data_packet.asid[0] = sq_it->asid[0];
   data_packet.asid[1] = sq_it->asid[1];
   data_packet.to_return = {&DTLB_bus};
@@ -930,6 +940,7 @@ void O3_CPU::execute_store(std::vector<LSQ_ENTRY>::iterator sq_it)
     std::cout << "[SQ1] " << __func__ << " instr_id: " << sq_it->instr_id << std::hex;
     std::cout << " full_address: " << sq_it->physical_address << std::dec << " remain_mem_ops: " << sq_it->rob_index->num_mem_ops;
     std::cout << " event_cycle: " << sq_it->event_cycle << std::endl;
+    std::cout << " packet type: " << sq_it->type << std::endl;
   });
 
   // resolve RAW dependency after DTLB access
@@ -965,6 +976,7 @@ int O3_CPU::do_translate_load(std::vector<LSQ_ENTRY>::iterator lq_it)
   data_packet.instr_id = lq_it->instr_id;
   data_packet.ip = lq_it->ip;
   data_packet.type = LOAD;
+  data_packet.type_origin = LOAD;
   data_packet.asid[0] = lq_it->asid[0];
   data_packet.asid[1] = lq_it->asid[1];
   data_packet.to_return = {&DTLB_bus};
@@ -994,6 +1006,7 @@ int O3_CPU::execute_load(std::vector<LSQ_ENTRY>::iterator lq_it)
   data_packet.instr_id = lq_it->instr_id;
   data_packet.ip = lq_it->ip;
   data_packet.type = LOAD;
+  data_packet.type_origin = LOAD;
   data_packet.asid[0] = lq_it->asid[0];
   data_packet.asid[1] = lq_it->asid[1];
   data_packet.to_return = {&L1D_bus};
@@ -1220,6 +1233,7 @@ void O3_CPU::retire_rob()
         data_packet.instr_id = sq_it->instr_id;
         data_packet.ip = sq_it->ip;
         data_packet.type = RFO;
+        data_packet.type_origin = RFO;
         data_packet.asid[0] = sq_it->asid[0];
         data_packet.asid[1] = sq_it->asid[1];
 

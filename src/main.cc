@@ -337,10 +337,10 @@ int main(int argc, char** argv)
 #endif  // RAMULATOR
 
 #if (USER_CODES == ENABLE)
-#if (PRINT_MEMORY_TRACE == ENABLE)
+#if (PRINT_MEMORY_TRACE == ENABLE || PRINT_MEMORY_TRACE_DECI == ENABLE)
   // prepare file for recording memory traces.
   output_memory_trace_initialization(argv[start_position_of_traces]);
-#endif  // PRINT_MEMORY_TRACE
+#endif  // PRINT_MEMORY_TRACE, PRINT_MEMORY_TRACE_DECI
 
 #if (PRINT_STATISTICS_INTO_FILE == ENABLE)
   output_champsim_statistics_initialization(argv[start_position_of_traces]);
@@ -421,9 +421,9 @@ int main(int argc, char** argv)
   printf("Simulation done.\n");
 #endif  // RAMULATOR
 
-#if (PRINT_MEMORY_TRACE == ENABLE)
+#if (PRINT_MEMORY_TRACE == ENABLE || PRINT_MEMORY_TRACE_DECI == ENABLE)
   output_memory_trace_deinitialization(outputmemorytrace_one);
-#endif  // PRINT_MEMORY_TRACE
+#endif  // PRINT_MEMORY_TRACE, PRINT_MEMORY_TRACE_DECI
 
 #if (PRINT_STATISTICS_INTO_FILE == ENABLE)
   output_champsim_statistics_deinitialization(outputchampsimstatistics);

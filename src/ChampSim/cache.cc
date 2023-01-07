@@ -62,6 +62,20 @@ void CACHE::handle_writeback()
     // handle the oldest entry
     PACKET& handle_pkt = WQ.front();
 
+  DP_SQ(if (warmup_complete[handle_pkt.cpu])
+  {
+    if (NAME == "cpu0_L1I" || NAME == "cpu0_L1D" || NAME == "cpu0_DTLB" || NAME == "cpu0_ITLB" || NAME == "cpu0_L2C")
+    {
+      std::cout << "[" << NAME << "] " << __func__;
+      std::cout << " instr_id: " << handle_pkt.instr_id << " address: " << std::hex << (handle_pkt.address >> OFFSET_BITS);
+      std::cout << " full_addr: " << handle_pkt.address;
+      std::cout << " full_v_addr: " << handle_pkt.v_address << std::dec;
+      std::cout << " type: " << +handle_pkt.type;
+      std::cout << " handle_pkt.to_return.empty(): " << handle_pkt.to_return.empty();
+      std::cout << " cycle: " << current_cycle << std::endl;
+    }
+  });
+
     // access cache
     uint32_t set = get_set(handle_pkt.address);
     uint32_t way = get_way(handle_pkt.address, set);
@@ -229,6 +243,16 @@ bool CACHE::readlike_miss(PACKET& handle_pkt)
     std::cout << " cycle: " << current_cycle << std::endl;
   });
 
+  DP_MISS(if (warmup_complete[handle_pkt.cpu])
+  {
+    std::cout << "[" << NAME << "] " << __func__ << " miss";
+    std::cout << " instr_id: " << handle_pkt.instr_id << " address: " << std::hex << (handle_pkt.address >> OFFSET_BITS);
+    std::cout << " full_addr: " << handle_pkt.address;
+    std::cout << " full_v_addr: " << handle_pkt.v_address << std::dec;
+    std::cout << " type: " << +handle_pkt.type;
+    std::cout << " cycle: " << current_cycle << std::endl;
+  });
+
   // check mshr
   auto mshr_entry = std::find_if(MSHR.begin(), MSHR.end(), eq_addr<PACKET>(handle_pkt.address, OFFSET_BITS));
   bool mshr_full = (MSHR.size() == MSHR_SIZE);
@@ -350,6 +374,16 @@ bool CACHE::filllike_miss(std::size_t set, std::size_t way, PACKET& handle_pkt)
     std::cout << " cycle: " << current_cycle << std::endl;
   });
 
+  DP_MISS(if (warmup_complete[handle_pkt.cpu])
+  {
+    std::cout << "[" << NAME << "] " << __func__ << " miss";
+    std::cout << " instr_id: " << handle_pkt.instr_id << " address: " << std::hex << (handle_pkt.address >> OFFSET_BITS);
+    std::cout << " full_addr: " << handle_pkt.address;
+    std::cout << " full_v_addr: " << handle_pkt.v_address << std::dec;
+    std::cout << " type: " << +handle_pkt.type;
+    std::cout << " cycle: " << current_cycle << std::endl;
+  });
+
   bool bypass = (way == NUM_WAY);
 #ifndef LLC_BYPASS
   assert(!bypass);
@@ -373,6 +407,7 @@ bool CACHE::filllike_miss(std::size_t set, std::size_t way, PACKET& handle_pkt)
       writeback_packet.instr_id = handle_pkt.instr_id;
       writeback_packet.ip = 0;
       writeback_packet.type = WRITEBACK;
+      writeback_packet.type_origin = WRITEBACK;
 
       auto result = lower_level->add_wq(&writeback_packet);
       if (result == -2)
@@ -547,6 +582,13 @@ int CACHE::add_wq(PACKET* packet)
     std::cout << "[" << NAME << "_WQ] " << __func__ << " instr_id: " << packet->instr_id << " address: " << std::hex << (packet->address >> OFFSET_BITS);
     std::cout << " full_addr: " << packet->address << " v_address: " << packet->v_address << std::dec << " type: " << +packet->type
       << " occupancy: " << RQ.occupancy();
+  });
+
+  DP_WQ(if (warmup_complete[packet->cpu])
+  {
+    std::cout << "[" << NAME << "_WQ] " << __func__ << " instr_id: " << packet->instr_id << " address: " << std::hex << (packet->address >> OFFSET_BITS);
+    std::cout << " full_addr: " << packet->address << " v_address: " << packet->v_address << std::dec << " type: " << +packet->type
+      << " occupancy: " << RQ.occupancy() << std::endl ;
   });
 
   // check for duplicates in the write queue

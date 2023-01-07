@@ -1282,8 +1282,13 @@ int MEMORY_CONTROLLER<T>::add_rq(PACKET* packet)
 
 #if (PRINT_MEMORY_TRACE == ENABLE)
   // output memory trace.
-  output_memory_trace_hexadecimal(outputmemorytrace_one, packet->address, 'R');
+  output_memory_trace_hexadecimal(outputmemorytrace_one, packet->address, 'R', packet->type_origin);
 #endif  // PRINT_MEMORY_TRACE
+
+#if (PRINT_MEMORY_TRACE_DECI == ENABLE)
+  // output memory trace.
+  output_memory_trace_decimal(outputmemorytrace_one, packet->address, 'R', packet->type_origin);
+#endif  // PRINT_MEMORY_TRACE_DECI
 
   if (stall == true)
   {
@@ -1325,8 +1330,13 @@ int MEMORY_CONTROLLER<T>::add_wq(PACKET* packet)
 
 #if (PRINT_MEMORY_TRACE == ENABLE)
   // output memory trace.
-  output_memory_trace_hexadecimal(outputmemorytrace_one, packet->address, 'W');
+  output_memory_trace_hexadecimal(outputmemorytrace_one, packet->address, 'W', packet->type_origin);
 #endif  // PRINT_MEMORY_TRACE
+
+#if (PRINT_MEMORY_TRACE_DECI == ENABLE)
+  // output memory trace.
+  output_memory_trace_decimal(outputmemorytrace_one, packet->address, 'W', packet->type_origin);
+#endif  // PRINT_MEMORY_TRACE_DECI
 
   if (stall == true)
   {

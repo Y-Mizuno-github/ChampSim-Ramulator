@@ -42,9 +42,14 @@ void output_memory_trace_deinitialization(OutputMemoryTraceFileType& outputmemor
     free(outputmemorytrace.trace_string);
 }
 
-void output_memory_trace_hexadecimal(OutputMemoryTraceFileType& outputmemorytrace, uint64_t address, char type)
+void output_memory_trace_hexadecimal(OutputMemoryTraceFileType& outputmemorytrace, uint64_t address, char type, uint8_t type_origin)
 {
-    fprintf(outputmemorytrace.trace_file, "0x%lx %c\n", address, type);
+    fprintf(outputmemorytrace.trace_file, "0x%lx %c %u\n", address, type, type_origin);
+}
+
+void output_memory_trace_decimal(OutputMemoryTraceFileType& outputmemorytrace, uint64_t address, char type, uint8_t type_origin)
+{
+    fprintf(outputmemorytrace.trace_file, "%lu %c %u\n", address, type, type_origin);
 }
 
 void output_champsim_statistics_initialization(const char* string)
