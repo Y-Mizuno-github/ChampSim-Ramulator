@@ -15,8 +15,8 @@
 #define RAMULATOR                                  (ENABLE) // whether use ramulator, assuming ramulator uses addresses at byte granularity and returns data at cache line granularity.
 #define MEMORY_USE_HYBRID                          (DISABLE) // whether use hybrid memory system instead of single memory systems
 #define PRINT_STATISTICS_INTO_FILE                 (DISABLE) // whether print simulation statistics into files
-#define PRINT_MEMORY_TRACE                         (DISABLE) // whether print memory trace into files
-#define PRINT_MEMORY_TRACE_DECI                    (ENABLE) // whether print memory trace into files
+#define PRINT_MEMORY_TRACE                         (DISABLE) // whether print memory trace into files ((address is presented as hexadecimal)
+#define PRINT_MEMORY_TRACE_DECI                    (ENABLE) // whether print memory trace into files (address is presented as decimal)
 #define MEMORY_USE_SWAPPING_UNIT                   (DISABLE) // whether memory controller uses swapping unit to swap data (data swapping overhead is considered)
 #define MEMORY_USE_OS_TRANSPARENT_MANAGEMENT       (DISABLE) // whether memory controller uses OS-transparent management designs to simulate the memory system instead of static (no-migration) methods
 
