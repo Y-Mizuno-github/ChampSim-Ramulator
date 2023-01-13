@@ -13,12 +13,12 @@
 #if (USER_CODES == ENABLE)
 #define USE_OPENMP                                 (ENABLE) // whether use OpenMP to speedup the simulation
 #define RAMULATOR                                  (ENABLE) // whether use ramulator, assuming ramulator uses addresses at byte granularity and returns data at cache line granularity.
-#define MEMORY_USE_HYBRID                          (DISABLE) // whether use hybrid memory system instead of single memory systems
+#define MEMORY_USE_HYBRID                          (ENABLE) // whether use hybrid memory system instead of single memory systems
 #define PRINT_STATISTICS_INTO_FILE                 (DISABLE) // whether print simulation statistics into files
 #define PRINT_MEMORY_TRACE                         (DISABLE) // whether print memory trace into files ((address is presented as hexadecimal)
-#define PRINT_MEMORY_TRACE_DECI                    (ENABLE) // whether print memory trace into files (address is presented as decimal)
-#define MEMORY_USE_SWAPPING_UNIT                   (DISABLE) // whether memory controller uses swapping unit to swap data (data swapping overhead is considered)
-#define MEMORY_USE_OS_TRANSPARENT_MANAGEMENT       (DISABLE) // whether memory controller uses OS-transparent management designs to simulate the memory system instead of static (no-migration) methods
+#define PRINT_MEMORY_TRACE_DECI                    (DISABLE) // whether print memory trace into files (address is presented as decimal)
+#define MEMORY_USE_SWAPPING_UNIT                   (ENABLE) // whether memory controller uses swapping unit to swap data (data swapping overhead is considered)
+#define MEMORY_USE_OS_TRANSPARENT_MANAGEMENT       (ENABLE) // whether memory controller uses OS-transparent management designs to simulate the memory system instead of static (no-migration) methods
 
 #if (MEMORY_USE_HYBRID == ENABLE)
 #define NUMBER_OF_MEMORIES   (2u)    // we use two memories for hybrid memory system.
@@ -39,10 +39,11 @@
 #endif  // MEMORY_USE_SWAPPING_UNIT
 
 #if (MEMORY_USE_OS_TRANSPARENT_MANAGEMENT == ENABLE)
-#define IDEAL_LINE_LOCATION_TABLE             (DISABLE)
-#define COLOCATED_LINE_LOCATION_TABLE         (ENABLE)
+#define IDEAL_LINE_LOCATION_TABLE             (ENABLE)
+#define COLOCATED_LINE_LOCATION_TABLE         (DISABLE)
 #define IDEAL_MULTIPLE_GRANULARITY            (DISABLE)
-#define ACTIVITY_WRITE_IGNORE                 (DISABLE)
+
+#define TRACKING_LOAD_ONLY                    (ENABLE)
 
 #define TEST_OS_TRANSPARENT_MANAGEMENT        (DISABLE)
 

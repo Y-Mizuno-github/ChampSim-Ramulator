@@ -416,7 +416,7 @@ int MEMORY_CONTROLLER<T, T2>::add_rq(PACKET* packet)
   /* Operate research proposals below */
 #if (MEMORY_USE_OS_TRANSPARENT_MANAGEMENT == ENABLE)
   os_transparent_management.physical_to_hardware_address(*packet);
-  os_transparent_management.memory_activity_tracking(packet->address, type, float(get_occupancy(type, packet->address)) / get_size(type, packet->address));
+  os_transparent_management.memory_activity_tracking(packet->address, type, packet->type_origin, float(get_occupancy(type, packet->address)) / get_size(type, packet->address));
 #endif  // MEMORY_USE_OS_TRANSPARENT_MANAGEMENT
 
 #if (MEMORY_USE_SWAPPING_UNIT == ENABLE)
@@ -540,7 +540,7 @@ int MEMORY_CONTROLLER<T, T2>::add_wq(PACKET* packet)
   /* Operate research proposals below */
 #if (MEMORY_USE_OS_TRANSPARENT_MANAGEMENT == ENABLE)
   os_transparent_management.physical_to_hardware_address(*packet);
-  os_transparent_management.memory_activity_tracking(packet->address, type, float(get_occupancy(type, packet->address)) / get_size(type, packet->address));
+  os_transparent_management.memory_activity_tracking(packet->address, type, packet->type_origin, float(get_occupancy(type, packet->address)) / get_size(type, packet->address));
 #endif  // MEMORY_USE_OS_TRANSPARENT_MANAGEMENT
 
 #if (MEMORY_USE_SWAPPING_UNIT == ENABLE)

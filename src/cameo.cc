@@ -43,15 +43,15 @@ OS_TRANSPARENT_MANAGEMENT::~OS_TRANSPARENT_MANAGEMENT()
     delete& line_location_table;
 };
 
-bool OS_TRANSPARENT_MANAGEMENT::memory_activity_tracking(uint64_t address, uint8_t type, float queue_busy_degree)
+bool OS_TRANSPARENT_MANAGEMENT::memory_activity_tracking(uint64_t address, uint8_t type, uint8_t type_origin, float queue_busy_degree)
 {
 
-#if (ACTIVITY_WRITE_IGNORE)
-    if (type == 2) // 
+#if (TRACKING_LOAD_ONLY)
+    if (type_origin == RFO || type_origin == WRITEBACK) // CPU Store Instruction and LLC Writeback is ignored
     {
         return true;
     }
-#endif // ACTIVITY_WRITE_IGNORE
+#endif // TRACKING_LOAD_ONLY
 
     if (address >= total_capacity)
     {
