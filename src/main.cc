@@ -1261,6 +1261,11 @@ void simulation_run(const Config& configs, Memory<T, Controller>& memory, const 
 {
   VirtualMemory vmem(memory.max_address + memory2.max_address, PAGE_SIZE, PAGE_TABLE_LEVELS, 1, MINOR_FAULT_PENALTY);
 
+#if (PRINT_STATISTICS_INTO_FILE == ENABLE)
+    fprintf(outputchampsimstatistics.trace_file, "Fast Memory Max Address: %lu \n", memory.max_address);
+    fprintf(outputchampsimstatistics.trace_file, "Slow Memory Max Address: %lu \n", memory2.max_address);
+#endif  // PRINT_STATISTICS_INTO_FILE
+
   std::array<O3_CPU*, NUM_CPUS> ooo_cpu{};
   MEMORY_CONTROLLER<T, T2> memory_controller(MEMORY_CONTROLLER_CLOCK_SCALE, CPU_FREQUENCY / memory.spec->speed_entry.freq, CPU_FREQUENCY / memory2.spec->speed_entry.freq, memory, memory2);
   CACHE LLC("LLC", CACHE_CLOCK_SCALE, LLC_LEVEL, LLC_SETS, LLC_WAYS, LLC_WQ_SIZE, LLC_RQ_SIZE, LLC_PQ_SIZE, LLC_MSHR_SIZE, LLC_LATENCY - 1, LLC_FILL_LATENCY, LLC_MAX_READ, LLC_MAX_WRITE, LOG2_BLOCK_SIZE, LLC_PREFETCH_AS_LOAD, LLC_WQ_FULL_ADDRESS, LLC_VIRTUAL_PREFETCH,
@@ -1708,6 +1713,10 @@ template <typename T>
 void simulation_run(const Config& configs, Memory<T, Controller>& memory)
 {
   VirtualMemory vmem(memory.max_address, PAGE_SIZE, PAGE_TABLE_LEVELS, 1, MINOR_FAULT_PENALTY);
+
+#if (PRINT_STATISTICS_INTO_FILE == ENABLE)
+    fprintf(outputchampsimstatistics.trace_file, "Memory Max Address: %lu \n", memory.max_address);
+#endif  // PRINT_STATISTICS_INTO_FILE
 
   std::array<O3_CPU*, NUM_CPUS> ooo_cpu{};
   MEMORY_CONTROLLER<T> memory_controller(MEMORY_CONTROLLER_CLOCK_SCALE, CPU_FREQUENCY / memory.spec->speed_entry.freq, memory);
