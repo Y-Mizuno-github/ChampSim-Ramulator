@@ -4,7 +4,7 @@
 #define ENABLE  (1)
 #define DISABLE (0)
 
-#define DEBUG_PRINTF (ENABLE)
+#define DEBUG_PRINTF (DISABLE)
 #define USER_CODES   (ENABLE)
 
 #define PRINT_SWAP_DETAIL  (ENABLE) // print swap detail (number of swap only now) into statistics file.
@@ -164,6 +164,7 @@
 #include <cstdio>
 #include <cassert>
 #include <array>
+#include <vector>
 
 #if (USE_OPENMP == ENABLE)
 #include <omp.h>
@@ -211,6 +212,8 @@ typedef struct
     uint64_t data_eviction_success, data_eviction_failure;
 #if (PRINT_SWAP_DETAIL)
     uint64_t swap_request;
+    uint64_t swap_enqueued;
+    uint64_t swap_cancelled;
 #endif // PRINT_SWAP_DETAIL
 
 } OutputChampSimStatisticsFileType;

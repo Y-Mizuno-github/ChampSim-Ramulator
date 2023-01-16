@@ -31,7 +31,7 @@
 
 
 /* for mea_counter_table */
-#define NUMBER_MEA_COUNTER              (64)
+#define NUMBER_MEA_COUNTER              (32)
 #define MEA_COUNTER_WIDTH               uint8_t
 #define MEA_COUNTER_MAX_VALUE           (15u)
 #define COUNTER_DEFAULT_VALUE           (0)
@@ -57,11 +57,6 @@ public:
     uint8_t  fast_memory_offset_bit;    // address format in the data management granularity
     uint8_t  swap_size = SWAP_DATA_CACHE_LINES; // == 32
 
-    struct mea_counter_entry{
-        uint64_t segment_address;
-        MEA_COUNTER_WIDTH counter_value;
-    };
-
     /* Remapping request */
     struct RemappingRequest
     {
@@ -70,7 +65,7 @@ public:
         uint8_t size;   // number of cache lines to remap == 32 (2048B)
     };
 
-    std::unordered_map<REMAPPING_TABLE_ENTRY_WIDTH, mea_counter_entry>& mea_counter_table;
+    std::unordered_map<REMAPPING_TABLE_ENTRY_WIDTH, MEA_COUNTER_WIDTH>& mea_counter_table;
     std::unordered_map<REMAPPING_TABLE_ENTRY_WIDTH, REMAPPING_TABLE_ENTRY_WIDTH>& address_remapping_table;
     std::unordered_map<REMAPPING_TABLE_ENTRY_WIDTH, REMAPPING_TABLE_ENTRY_WIDTH>& invert_address_remapping_table;
 
@@ -79,6 +74,8 @@ public:
 
 #if (PRINT_SWAP_DETAIL)
     uint64_t swap_request;
+    uint64_t swap_enqueued;
+    uint64_t swap_cancelled;
 #endif // PRINT_SWAP_DETAIL
 
     double interval_cycle = CPU_FREQUENCY * (double)TIME_INTERVAL_MEMPOD_us / MEMORY_CONTROLLER_CLOCK_SCALE;
@@ -89,7 +86,7 @@ public:
     ~OS_TRANSPARENT_MANAGEMENT();
 
     // address is physical address and at byte granularity
-    bool memory_activity_tracking(uint64_t address, uint8_t type, float queue_busy_degree);
+    bool memory_activity_tracking(uint64_t address, uint8_t type, uint8_t type_origin, float queue_busy_degree);
 
     // translate the physical address to hardware address
     void physical_to_hardware_address(PACKET& packet);
@@ -99,16 +96,17 @@ public:
     void cold_data_detection();
 
     // MemPod interval swap
-    void issue_interval_swaps();
+    void check_interval_swap(uint8_t swapping_states);
     bool issue_remapping_request(RemappingRequest& remapping_request);
     bool finish_remapping_request();
 
-    bool enqueue_remapping_request(RemappingRequest& remapping_request);
-    bool cancel_not_started_remapping_request();
-    
 private:
-    void get_hot_page_from_mea_counter(std::vector<mea_counter_entry>& hot_pages);
-
+    void get_hot_page_from_mea_counter(std::vector<REMAPPING_TABLE_ENTRY_WIDTH>& hot_pages);
+    void determine_swap_pair(std::vector<REMAPPING_TABLE_ENTRY_WIDTH>& hot_pages);
+    void get_victim_page_in_fm(std::vector<REMAPPING_TABLE_ENTRY_WIDTH>& victim_pages);
+    void update_mea_counter(uint64_t segment_address);
+    void cancel_not_started_remapping_request(uint8_t swapping_states);
+    bool enqueue_remapping_request(RemappingRequest& remapping_request);
 
 
 };

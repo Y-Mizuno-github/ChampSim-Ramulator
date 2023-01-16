@@ -9,13 +9,15 @@ OS_TRANSPARENT_MANAGEMENT::OS_TRANSPARENT_MANAGEMENT(uint64_t max_address, uint6
     total_capacity_at_granularity(max_address >> DATA_MANAGEMENT_OFFSET_BITS),
     fast_memory_capacity_at_granularity(fast_memory_max_address >> DATA_MANAGEMENT_OFFSET_BITS),
     fast_memory_offset_bit(DATA_MANAGEMENT_OFFSET_BITS),
-    mea_counter_table(*(new std::unordered_map<REMAPPING_TABLE_ENTRY_WIDTH, mea_counter_entry>())),
+    mea_counter_table(*(new std::unordered_map<REMAPPING_TABLE_ENTRY_WIDTH, MEA_COUNTER_WIDTH>())),
     address_remapping_table(*(new std::unordered_map<REMAPPING_TABLE_ENTRY_WIDTH, REMAPPING_TABLE_ENTRY_WIDTH>())),
     invert_address_remapping_table(*(new std::unordered_map<REMAPPING_TABLE_ENTRY_WIDTH, REMAPPING_TABLE_ENTRY_WIDTH>()))
 {
     remapping_request_queue_congestion = 0;
 #if (PRINT_SWAP_DETAIL)
     swap_request = 0;
+    swap_enqueued = 0;
+    swap_cancelled = 0;
 #endif // PRINT_SWAP_DETAIL
 
     /* initializing address_remapping_table and invert_address_remapping_table */
@@ -41,6 +43,8 @@ OS_TRANSPARENT_MANAGEMENT::~OS_TRANSPARENT_MANAGEMENT()
 
 #if (PRINT_SWAP_DETAIL)
     outputchampsimstatistics.swap_request = swap_request;
+    outputchampsimstatistics.swap_enqueued = swap_enqueued;
+    outputchampsimstatistics.swap_cancelled = swap_cancelled;
 #endif // PRINT_SWAP_DETAIL
 
     delete& mea_counter_table;
@@ -48,10 +52,9 @@ OS_TRANSPARENT_MANAGEMENT::~OS_TRANSPARENT_MANAGEMENT()
     delete& invert_address_remapping_table;
 };
 
-// incomplete
-bool OS_TRANSPARENT_MANAGEMENT::memory_activity_tracking(uint64_t address, uint8_t type, float queue_busy_degree)
+// complete
+bool OS_TRANSPARENT_MANAGEMENT::memory_activity_tracking(uint64_t address, uint8_t type, uint8_t type_origin, float queue_busy_degree)
 {
-
 #if (TRACKING_LOAD_ONLY)
     if (type_origin == RFO || type_origin == WRITEBACK) // CPU Store Instruction and LLC Writeback is ignored
     {
@@ -72,126 +75,68 @@ bool OS_TRANSPARENT_MANAGEMENT::memory_activity_tracking(uint64_t address, uint8
         return false;
     }
 
-    uint64_t data_block_address = address >> DATA_MANAGEMENT_OFFSET_BITS;   // calculate the data block address
-    uint64_t line_location_table_index = data_block_address % fast_memory_capacity_at_data_block_granularity;   // calculate the index in line location table
-    REMAPPING_LOCATION_WIDTH location = static_cast<REMAPPING_LOCATION_WIDTH>(data_block_address / fast_memory_capacity_at_data_block_granularity); // calculate the location in the entry of the line location table
+    uint64_t data_segment_address = address >> DATA_MANAGEMENT_OFFSET_BITS;   // calculate the data block address
+    update_mea_counter(data_segment_address);
+    return true;
+};
 
-    if (location >= REMAPPING_LOCATION_WIDTH(RemappingLocation::Max))
+// debugged
+void OS_TRANSPARENT_MANAGEMENT::update_mea_counter(uint64_t segment_address)
+{   
+    std::deque<REMAPPING_TABLE_ENTRY_WIDTH> data_to_delete;
+
+    if (mea_counter_table.count(segment_address) == 1)
     {
-        std::cout << __func__ << ": address input error (location)." << std::endl;
-        abort();
+        mea_counter_table[segment_address]++;
     }
-
-    uint8_t msb_in_location_table_entry = LOCATION_TABLE_ENTRY_MSB - REMAPPING_LOCATION_WIDTH_BITS * location;
-    uint8_t lsb_in_location_table_entry = LOCATION_TABLE_ENTRY_MSB - (REMAPPING_LOCATION_WIDTH_BITS + REMAPPING_LOCATION_WIDTH_BITS * location - 1);
-
-    REMAPPING_LOCATION_WIDTH remapping_location = get_bits(line_location_table.at(line_location_table_index), msb_in_location_table_entry, lsb_in_location_table_entry);
-
-    if (type == 1)  // for read request
+    else if (mea_counter_table.count(segment_address) == 0)
     {
-        if (counter_table.at(data_block_address) < COUNTER_MAX_VALUE)
+        if (mea_counter_table.size() >= NUMBER_MEA_COUNTER)
         {
-            counter_table[data_block_address]++;    // increment its counter
+            for (auto mea_itr = mea_counter_table.begin(); mea_itr != mea_counter_table.end(); ++mea_itr)
+            {
+                mea_itr->second--;
+                if (mea_itr->second == 0)
+                {   
+                    data_to_delete.push_back(mea_itr->first);
+                }
+            }
+            for (uint8_t i_delete_queue = 0; i_delete_queue < data_to_delete.size(); i_delete_queue++) {
+                mea_counter_table.erase(data_to_delete[i_delete_queue]);
+            }
         }
-
-        if (counter_table.at(data_block_address) >= hotness_threshold)
+        else
         {
-            hotness_table.at(data_block_address) = true;    // mark hot data block
-        }
-
-    }
-    else if (type == 2) // for write request
-    {
-        if (counter_table.at(data_block_address) < COUNTER_MAX_VALUE)
-        {
-            counter_table[data_block_address]++;    // increment its counter
-        }
-
-        if (counter_table.at(data_block_address) >= hotness_threshold)
-        {
-            hotness_table.at(data_block_address) = true;    // mark hot data block
+           mea_counter_table[segment_address] = 1; 
         }
     }
     else
     {
-        std::cout << __func__ << ": type input error." << std::endl;
+        std::cout << __func__ << ": mea counter error" << std::endl;
         assert(0);
     }
-
-    // add new remapping requests to queue
-    if ((hotness_table.at(data_block_address) == true) && (remapping_location != REMAPPING_LOCATION_WIDTH(RemappingLocation::Zero)))
-    {
-        RemappingRequest remapping_request;
-        REMAPPING_LOCATION_WIDTH fm_location = REMAPPING_LOCATION_WIDTH(RemappingLocation::Max);
-
-        uint8_t fm_msb_in_location_table_entry;
-        uint8_t fm_lsb_in_location_table_entry;
-        REMAPPING_LOCATION_WIDTH fm_remapping_location;
-
-        // find the fm_location in the entry of line_location_table (where RemappingLocation::Zero is in the entry of line_location_table)
-        for (REMAPPING_LOCATION_WIDTH i = REMAPPING_LOCATION_WIDTH(RemappingLocation::Zero); i < REMAPPING_LOCATION_WIDTH(RemappingLocation::Max); i++)
-        {
-            fm_msb_in_location_table_entry = LOCATION_TABLE_ENTRY_MSB - REMAPPING_LOCATION_WIDTH_BITS * i;
-            fm_lsb_in_location_table_entry = LOCATION_TABLE_ENTRY_MSB - (REMAPPING_LOCATION_WIDTH_BITS + REMAPPING_LOCATION_WIDTH_BITS * i - 1);
-
-            fm_remapping_location = get_bits(line_location_table.at(line_location_table_index), fm_msb_in_location_table_entry, fm_lsb_in_location_table_entry);
-
-            if (fm_remapping_location == REMAPPING_LOCATION_WIDTH(RemappingLocation::Zero))
-            {
-                // found the location of fm_remapping_location in the entry of line_location_table
-                fm_location = i;
-                break;
-            }
-        }
-
-        if (fm_location == REMAPPING_LOCATION_WIDTH(RemappingLocation::Max))
-        {
-            std::cout << __func__ << ": find the fm_location error." << std::endl;
-            abort();
-        }
-
-        if (fm_remapping_location == remapping_location)    // check
-        {
-            std::cout << __func__ << ": add new remapping request error 1." << std::endl;
-            printf("line_location_table.at(%ld): %d.\n", line_location_table_index, line_location_table.at(line_location_table_index));
-            printf("remapping_location: %d, fm_remapping_location: %d.\n", remapping_location, fm_remapping_location);
-            printf("fm_msb_in_location_table_entry: %d, fm_lsb_in_location_table_entry: %d.\n", fm_msb_in_location_table_entry, fm_lsb_in_location_table_entry);
-            printf("msb_in_location_table_entry: %d, lsb_in_location_table_entry: %d.\n", msb_in_location_table_entry, lsb_in_location_table_entry);
-            abort();
-        }
-
-        remapping_request.address_in_fm = replace_bits(line_location_table_index << DATA_MANAGEMENT_OFFSET_BITS, uint64_t(fm_remapping_location) << fast_memory_offset_bit, congruence_group_msb, fast_memory_offset_bit);
-        remapping_request.address_in_sm = replace_bits(line_location_table_index << DATA_MANAGEMENT_OFFSET_BITS, uint64_t(remapping_location) << fast_memory_offset_bit, congruence_group_msb, fast_memory_offset_bit);
-
-        // indicate the positions in line location table entry for address_in_fm and address_in_sm.
-        remapping_request.fm_location = fm_location;
-        remapping_request.sm_location = location;
-
-        remapping_request.size = DATA_GRANULARITY_IN_CACHE_LINE;
-
-        if (queue_busy_degree <= QUEUE_BUSY_DEGREE_THRESHOLD)
-        {
-            enqueue_remapping_request(remapping_request);
-        }
-    }
-
-    return true;
 };
 
 // complete
 void OS_TRANSPARENT_MANAGEMENT::physical_to_hardware_address(PACKET& packet)
 {
     uint64_t data_segment_address = packet.address >> DATA_MANAGEMENT_OFFSET_BITS;
-    uint64_t data_segment_offset = packet.address - data_segment_address;
-    packet.h_address = address_remapping_table[data_segment_address] << DATA_MANAGEMENT_OFFSET_BITS + data_segment_offset;
+    uint64_t data_segment_offset = packet.address - (data_segment_address << DATA_MANAGEMENT_OFFSET_BITS);
+#if (DEBUG_PRINTF == ENABLE)
+    printf("physical_to_hardware_address(PACKET), p_segment %lu, h_segment %lu \n", data_segment_address, address_remapping_table[data_segment_address]);
+#endif
+    packet.h_address = (address_remapping_table[data_segment_address] << DATA_MANAGEMENT_OFFSET_BITS) + data_segment_offset;
 };
 
 // complete
 void OS_TRANSPARENT_MANAGEMENT::physical_to_hardware_address(uint64_t& address)
 {
     uint64_t data_segment_address = address >> DATA_MANAGEMENT_OFFSET_BITS;
-    uint64_t data_segment_offset = address - data_segment_address;
-    address = address_remapping_table[data_segment_address] << DATA_MANAGEMENT_OFFSET_BITS + data_segment_offset;
+    uint64_t data_segment_offset = address - (data_segment_address << DATA_MANAGEMENT_OFFSET_BITS);
+#if (DEBUG_PRINTF == ENABLE)
+    printf("physical_to_hardware_address(uint64_t), p_segment %lu, h_segment %lu \n", data_segment_address, address_remapping_table[data_segment_address]);
+#endif
+    address = (address_remapping_table[data_segment_address] << DATA_MANAGEMENT_OFFSET_BITS) + data_segment_offset;
 };
 
 // complete
@@ -247,18 +192,36 @@ bool OS_TRANSPARENT_MANAGEMENT::finish_remapping_request()
 void OS_TRANSPARENT_MANAGEMENT::cold_data_detection()
 {
     cycle++;
-}
+};
 
-// incomplete
+// complete
+void OS_TRANSPARENT_MANAGEMENT::check_interval_swap(uint8_t swapping_states)
+{   
+    if (cycle >= next_interval_cycle)
+    {   
+        /* cancel remapping request what is not started in last epoch */
+        cancel_not_started_remapping_request(swapping_states);
+
+        /* get hot pages and victim pages */
+        std::vector<REMAPPING_TABLE_ENTRY_WIDTH> hot_pages = *(new std::vector<REMAPPING_TABLE_ENTRY_WIDTH>(mea_counter_table.size()));
+        get_hot_page_from_mea_counter(hot_pages);
+        determine_swap_pair(hot_pages);
+
+        /* set next interval */
+        next_interval_cycle += interval_cycle;
+    }
+};
+
+// complete
 bool OS_TRANSPARENT_MANAGEMENT::enqueue_remapping_request(RemappingRequest& remapping_request)
 {
+/*
     uint64_t data_segment_address = remapping_request.h_address_in_sm >> DATA_MANAGEMENT_OFFSET_BITS;
-    uint64_t line_location_table_index = data_block_address % fast_memory_capacity_at_data_block_granularity;
 
     // check duplicated remapping request in remapping_request_queue
     // if duplicated remapping requests exist, we won't add this new remapping request into the remapping_request_queue.
     bool duplicated_remapping_request = false;
-    for (uint64_t i = 0; i < remapping_request_queue.size(); i++)
+    for (uint64_t i = 1; i < remapping_request_queue.size(); i++)
     {
         uint64_t data_block_address_to_check = remapping_request_queue[i].address_in_fm >> DATA_MANAGEMENT_OFFSET_BITS;
         uint64_t line_location_table_index_to_check = data_block_address_to_check % fast_memory_capacity_at_data_block_granularity;
@@ -294,6 +257,22 @@ bool OS_TRANSPARENT_MANAGEMENT::enqueue_remapping_request(RemappingRequest& rema
     {
         return false;
     }
+*/
+    if (remapping_request_queue.size() < REMAPPING_REQUEST_QUEUE_LENGTH)
+    {
+        if (remapping_request.h_address_in_fm == remapping_request.h_address_in_sm)    // check
+        {
+            std::cout << __func__ << ": add new remapping request error 2." << std::endl;
+            abort();
+        }
+
+        // enqueue a remapping request
+        remapping_request_queue.push_back(remapping_request);
+    }
+    else
+    {
+        remapping_request_queue_congestion++;
+    }
 
     // new remapping request is issued.
 #if (PRINT_SWAP_DETAIL)
@@ -301,6 +280,100 @@ bool OS_TRANSPARENT_MANAGEMENT::enqueue_remapping_request(RemappingRequest& rema
 #endif
     return true;
 }
+
+// debugged
+void OS_TRANSPARENT_MANAGEMENT::get_hot_page_from_mea_counter(std::vector<REMAPPING_TABLE_ENTRY_WIDTH>& hot_pages)
+{   
+    int hot_page_itr = 0;
+    for (auto mea_itr = mea_counter_table.begin(); mea_itr != mea_counter_table.end(); ++mea_itr)
+    {
+        hot_pages[hot_page_itr] = mea_itr->first;
+        hot_page_itr++;
+    }
+    std::sort(hot_pages.begin(),hot_pages.end());
+};
+
+// debugged
+void OS_TRANSPARENT_MANAGEMENT::determine_swap_pair(std::vector<REMAPPING_TABLE_ENTRY_WIDTH>& hot_pages)
+{   
+    REMAPPING_TABLE_ENTRY_WIDTH fm_address_itr = 0;
+    REMAPPING_TABLE_ENTRY_WIDTH hot_page_h_address;
+    REMAPPING_TABLE_ENTRY_WIDTH hot_page_p_address;
+    std::deque<REMAPPING_TABLE_ENTRY_WIDTH> hot_page_in_fm;
+
+    for (uint8_t hot_page_itr = 0; hot_page_itr < hot_pages.size(); hot_page_itr++)
+    {     
+        hot_page_p_address = hot_pages[hot_page_itr];
+        hot_page_h_address = address_remapping_table[hot_page_p_address];
+        if (hot_page_h_address < fast_memory_capacity_at_granularity) // if hot_page in Fast Memory
+        {
+            hot_page_in_fm.push_back(hot_page_h_address);
+        }
+        else if (hot_page_h_address < total_capacity_at_granularity)
+        {   
+            while (fm_address_itr == hot_page_in_fm.front())
+            {
+                fm_address_itr++;
+                hot_page_in_fm.pop_front();
+            }
+
+            RemappingRequest remapping_request;
+            remapping_request.p_address_in_fm = invert_address_remapping_table[fm_address_itr] << DATA_MANAGEMENT_OFFSET_BITS;
+            remapping_request.p_address_in_sm = hot_page_p_address << DATA_MANAGEMENT_OFFSET_BITS;
+            remapping_request.h_address_in_fm = fm_address_itr << DATA_MANAGEMENT_OFFSET_BITS;
+            remapping_request.h_address_in_sm = hot_page_h_address << DATA_MANAGEMENT_OFFSET_BITS;
+            remapping_request.size = SWAP_DATA_CACHE_LINES;
+            enqueue_remapping_request(remapping_request);
+#if (PRINT_SWAP_DETAIL)
+            swap_enqueued++;
+#endif
+            fm_address_itr++;
+
+        }
+        else
+        {
+            std::cout << __func__ << ": hot page range error" << std::endl;
+            assert(0);            
+        }
+    }
+};
+
+// complete
+void OS_TRANSPARENT_MANAGEMENT::cancel_not_started_remapping_request(uint8_t swapping_states)
+{
+    switch (swapping_states)
+    {
+        case 0: // the swapping unit is idle
+            {   
+#if (PRINT_SWAP_DETAIL)
+                swap_cancelled += remapping_request_queue.size();
+#endif
+                remapping_request_queue.clear();
+                break;
+            }
+        case 1: // the swapping unit is busy
+            {  
+#if (PRINT_SWAP_DETAIL) 
+                swap_cancelled += (remapping_request_queue.size() - 1);
+#endif
+                RemappingRequest remapping_request_in_progress = remapping_request_queue.front();
+                remapping_request_queue.clear();
+                remapping_request_queue.push_back(remapping_request_in_progress);
+                break;
+            }
+        case 2: // the swapping unit finishes a swapping request
+            {   
+#if (PRINT_SWAP_DETAIL)
+                swap_cancelled += remapping_request_queue.size();
+#endif
+                remapping_request_queue.clear();
+                break;
+            }
+        default:
+            break;
+    }
+};
+
 
 #endif  // IDEAL_SINGLE_MEMPOD
 #endif  // MEMORY_USE_OS_TRANSPARENT_MANAGEMENT

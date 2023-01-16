@@ -127,6 +127,8 @@ void output_champsim_statistics_deinitialization(OutputChampSimStatisticsFileTyp
 
 #if (PRINT_SWAP_DETAIL)
     fprintf(outputchampsimstatistics.trace_file, "swap_request: %ld \n", outputchampsimstatistics.swap_request);
+    fprintf(outputchampsimstatistics.trace_file, "swap_enqueued: %ld \n", outputchampsimstatistics.swap_enqueued);
+    fprintf(outputchampsimstatistics.trace_file, "swap_cancelled: %ld \n", outputchampsimstatistics.swap_cancelled);
 #endif
 
     fclose(outputchampsimstatistics.trace_file);

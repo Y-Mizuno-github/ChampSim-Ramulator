@@ -9,8 +9,13 @@
 #include "memory_class.h"
 #include "operable.h"
 #include "util.h"
-#include "os_transparent_management.h"
 #include "ProjectConfiguration.h" // user file
+
+#if (IDEAL_SINGLE_MEMPOD == ENABLE)
+#include "ideal_single_mempod.h"
+#else
+#include "os_transparent_management.h"
+#endif // IDEAL_SINGLE_MEMPOD
 
 #if (RAMULATOR == ENABLE)
 #else
@@ -208,7 +213,11 @@ MEMORY_CONTROLLER<T, T2>::MEMORY_CONTROLLER(double freq_scale, double clock_scal
 #if (MEMORY_USE_OS_TRANSPARENT_MANAGEMENT == ENABLE)
   : champsim::operable(freq_scale), MemoryRequestConsumer(std::numeric_limits<unsigned>::max()),
   clock_scale(clock_scale), clock_scale2(clock_scale2), memory(memory), memory2(memory2),
+#if (IDEAL_SINGLE_MEMPOD == ENABLE)
+  os_transparent_management(*(new OS_TRANSPARENT_MANAGEMENT(memory.max_address + memory2.max_address, memory.max_address)))
+#else
   os_transparent_management(*(new OS_TRANSPARENT_MANAGEMENT(HOTNESS_THRESHOLD, memory.max_address + memory2.max_address, memory.max_address)))
+#endif // IDEAL_SINGLE_MEMPOD
 #else
   : champsim::operable(freq_scale), MemoryRequestConsumer(std::numeric_limits<unsigned>::max()),
   clock_scale(clock_scale), clock_scale2(clock_scale2), memory(memory), memory2(memory2)
@@ -335,9 +344,11 @@ void MEMORY_CONTROLLER<T, T2>::operate()
     bool issue = os_transparent_management.issue_remapping_request(remapping_request);
     if (issue == true)  // get a new remapping request.
     {
-#if (IDEAL_LINE_LOCATION_TABLE == ENABLE) || (COLOCATED_LINE_LOCATION_TABLE == ENABLE) || (IDEAL_MULTIPLE_GRANULARITY == ENABLE) || (IDEAL_SINGLE_MEMPOD == ENABLE)
+#if (IDEAL_LINE_LOCATION_TABLE == ENABLE) || (COLOCATED_LINE_LOCATION_TABLE == ENABLE) || (IDEAL_MULTIPLE_GRANULARITY == ENABLE)
       start_swapping_segments(remapping_request.address_in_fm, remapping_request.address_in_sm, remapping_request.size);
-#endif  // IDEAL_LINE_LOCATION_TABLE, COLOCATED_LINE_LOCATION_TABLE
+#elif (IDEAL_SINGLE_MEMPOD == ENABLE)
+      start_swapping_segments(remapping_request.h_address_in_fm, remapping_request.h_address_in_sm, remapping_request.size);
+#endif  // IDEAL_LINE_LOCATION_TABLE, COLOCATED_LINE_LOCATION_TABLE, IDEAL_SINGLE_MEMPOD
     }
 #endif  // MEMORY_USE_OS_TRANSPARENT_MANAGEMENT
   }
@@ -366,6 +377,12 @@ void MEMORY_CONTROLLER<T, T2>::operate()
   }
 #endif  // MEMORY_USE_OS_TRANSPARENT_MANAGEMENT
 #endif  // MEMORY_USE_SWAPPING_UNIT
+
+#if (MEMORY_USE_OS_TRANSPARENT_MANAGEMENT == ENABLE)
+#if (IDEAL_SINGLE_MEMPOD == ENABLE)
+  os_transparent_management.check_interval_swap(swapping_states);
+#endif // IDEAL_SINGLE_MEMPOD
+#endif // MEMORY_USE_OS_TRANSPARENT_MANAGEMENT
 
   /* Operate memories below */
   static double leap_operation = 0, leap_operation2 = 0;
@@ -405,6 +422,10 @@ int MEMORY_CONTROLLER<T, T2>::add_rq(PACKET* packet)
 {
   const static uint8_t type = 1;  // it means the input request is read request.
 
+#if (DEBUG_PRINTF == ENABLE)
+  printf("add_rq: p_address %lu \n", packet->address);
+#endif
+
   if (all_warmup_complete < NUM_CPUS)
   {
     for (auto ret : packet->to_return)
@@ -416,6 +437,9 @@ int MEMORY_CONTROLLER<T, T2>::add_rq(PACKET* packet)
   /* Operate research proposals below */
 #if (MEMORY_USE_OS_TRANSPARENT_MANAGEMENT == ENABLE)
   os_transparent_management.physical_to_hardware_address(*packet);
+#if (DEBUG_PRINTF == ENABLE)
+  printf("address in packet translated: p_address %lu, h_address %lu \n", packet->address, packet->h_address);
+#endif
   os_transparent_management.memory_activity_tracking(packet->address, type, packet->type_origin, float(get_occupancy(type, packet->address)) / get_size(type, packet->address));
 #endif  // MEMORY_USE_OS_TRANSPARENT_MANAGEMENT
 
@@ -479,6 +503,10 @@ int MEMORY_CONTROLLER<T, T2>::add_rq(PACKET* packet)
     Request request(address, Request::Type::READ, std::bind(&MEMORY_CONTROLLER<T, T2>::return_data, this, placeholders::_1), *packet, packet->cpu, memory_id);
     stall = !memory.send(request);
 
+#if (DEBUG_PRINTF == ENABLE)
+  printf("add_rq send to fast memory: h_address %lu \n", address);
+#endif
+
     if (stall == false)
     {
       read_request_in_memory++;
@@ -503,6 +531,10 @@ int MEMORY_CONTROLLER<T, T2>::add_rq(PACKET* packet)
     // the memory itself doesn't know other memories' space, so we manage the overall mapping.
     Request request(address - memory.max_address, Request::Type::READ, std::bind(&MEMORY_CONTROLLER<T, T2>::return_data, this, placeholders::_1), *packet, packet->cpu, memory2_id);
     stall = !memory2.send(request);
+
+#if (DEBUG_PRINTF == ENABLE)
+  printf("add_rq send to slow memory: h_address %lu \n", address);
+#endif
 
     if (stall == false)
     {
@@ -533,6 +565,10 @@ template<class T, class T2>
 int MEMORY_CONTROLLER<T, T2>::add_wq(PACKET* packet)
 {
   const static uint8_t type = 2;  // it means the input request is write request.
+
+#if (DEBUG_PRINTF == ENABLE)
+  printf("add_wq: p_address %lu \n", packet->address);
+#endif
 
   if (all_warmup_complete < NUM_CPUS)
     return int(ReturnValue::Forward); // Fast-forward
@@ -607,6 +643,10 @@ int MEMORY_CONTROLLER<T, T2>::add_wq(PACKET* packet)
     Request request(address, Request::Type::WRITE, std::bind(&MEMORY_CONTROLLER<T, T2>::return_data, this, placeholders::_1), *packet, packet->cpu, memory_id);
     stall = !memory.send(request);
 
+#if (DEBUG_PRINTF == ENABLE)
+  printf("add_wq send to fast memory: h_address %lu \n", address);
+#endif
+
     if (stall == false)
     {
       write_request_in_memory++;
@@ -617,6 +657,10 @@ int MEMORY_CONTROLLER<T, T2>::add_wq(PACKET* packet)
     // the memory itself doesn't know other memories' space, so we manage the overall mapping.
     Request request(address - memory.max_address, Request::Type::WRITE, std::bind(&MEMORY_CONTROLLER<T, T2>::return_data, this, placeholders::_1), *packet, packet->cpu, memory2_id);
     stall = !memory2.send(request);
+
+#if (DEBUG_PRINTF == ENABLE)
+  printf("add_wq send to slow memory: h_address %lu \n", address);
+#endif
 
     if (stall == false)
     {
@@ -663,6 +707,11 @@ uint32_t MEMORY_CONTROLLER<T, T2>::get_occupancy(uint8_t queue_type, uint64_t ad
 
 #if (MEMORY_USE_OS_TRANSPARENT_MANAGEMENT == ENABLE)
   os_transparent_management.physical_to_hardware_address(address);
+
+#if (DEBUG_PRINTF == ENABLE)
+  printf("address in packet translated (get_occupancy): h_address %lu \n", address);
+#endif
+
 #endif  // MEMORY_USE_OS_TRANSPARENT_MANAGEMENT
 
   // assign the request to the right memory.
