@@ -335,7 +335,7 @@ void MEMORY_CONTROLLER<T, T2>::operate()
     bool issue = os_transparent_management.issue_remapping_request(remapping_request);
     if (issue == true)  // get a new remapping request.
     {
-#if (IDEAL_LINE_LOCATION_TABLE == ENABLE) || (COLOCATED_LINE_LOCATION_TABLE == ENABLE) || (IDEAL_MULTIPLE_GRANULARITY == ENABLE)
+#if (IDEAL_LINE_LOCATION_TABLE == ENABLE) || (COLOCATED_LINE_LOCATION_TABLE == ENABLE) || (IDEAL_MULTIPLE_GRANULARITY == ENABLE) || (IDEAL_SINGLE_MEMPOD == ENABLE)
       start_swapping_segments(remapping_request.address_in_fm, remapping_request.address_in_sm, remapping_request.size);
 #endif  // IDEAL_LINE_LOCATION_TABLE, COLOCATED_LINE_LOCATION_TABLE
     }

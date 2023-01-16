@@ -13,12 +13,12 @@
 #if (USER_CODES == ENABLE)
 #define USE_OPENMP                                 (ENABLE) // whether use OpenMP to speedup the simulation
 #define RAMULATOR                                  (ENABLE) // whether use ramulator, assuming ramulator uses addresses at byte granularity and returns data at cache line granularity.
-#define MEMORY_USE_HYBRID                          (DISABLE) // whether use hybrid memory system instead of single memory systems
+#define MEMORY_USE_HYBRID                          (ENABLE) // whether use hybrid memory system instead of single memory systems
 #define PRINT_STATISTICS_INTO_FILE                 (ENABLE) // whether print simulation statistics into files
 #define PRINT_MEMORY_TRACE                         (DISABLE) // whether print memory trace into files ((address is presented as hexadecimal)
 #define PRINT_MEMORY_TRACE_DECI                    (DISABLE) // whether print memory trace into files (address is presented as decimal)
-#define MEMORY_USE_SWAPPING_UNIT                   (DISABLE) // whether memory controller uses swapping unit to swap data (data swapping overhead is considered)
-#define MEMORY_USE_OS_TRANSPARENT_MANAGEMENT       (DISABLE) // whether memory controller uses OS-transparent management designs to simulate the memory system instead of static (no-migration) methods
+#define MEMORY_USE_SWAPPING_UNIT                   (ENABLE) // whether memory controller uses swapping unit to swap data (data swapping overhead is considered)
+#define MEMORY_USE_OS_TRANSPARENT_MANAGEMENT       (ENABLE) // whether memory controller uses OS-transparent management designs to simulate the memory system instead of static (no-migration) methods
 
 #if (MEMORY_USE_HYBRID == ENABLE)
 #define NUMBER_OF_MEMORIES   (2u)    // we use two memories for hybrid memory system.
@@ -39,14 +39,21 @@
 #endif  // MEMORY_USE_SWAPPING_UNIT
 
 #if (MEMORY_USE_OS_TRANSPARENT_MANAGEMENT == ENABLE)
-#define IDEAL_LINE_LOCATION_TABLE             (ENABLE)
+/* Select Method */
+#define IDEAL_LINE_LOCATION_TABLE             (DISABLE)
 #define COLOCATED_LINE_LOCATION_TABLE         (DISABLE)
 #define IDEAL_MULTIPLE_GRANULARITY            (DISABLE)
+#define IDEAL_SINGLE_MEMPOD                   (ENABLE)
 
-#define TRACKING_LOAD_ONLY                    (ENABLE)
+/* Option for research */
+#define TRACKING_LOAD_ONLY                    (DISABLE)
+#define TRACKING_READ_ONLY                    (DISABLE)
 
+/* for test */
 #define TEST_OS_TRANSPARENT_MANAGEMENT        (DISABLE)
 
+#if (IDEAL_SINGLE_MEMPOD == ENABLE)
+#else
 #if (IDEAL_LINE_LOCATION_TABLE == ENABLE) || (COLOCATED_LINE_LOCATION_TABLE == ENABLE)
 #define HOTNESS_THRESHOLD                     (1u)
 #elif (IDEAL_MULTIPLE_GRANULARITY == ENABLE)
@@ -62,8 +69,11 @@
 #if (IDEAL_LINE_LOCATION_TABLE == DISABLE) && (COLOCATED_LINE_LOCATION_TABLE == DISABLE) && (IDEAL_MULTIPLE_GRANULARITY == DISABLE)
 #error OS-transparent management designs need to be enabled.
 #endif  // IDEAL_LINE_LOCATION_TABLE, COLOCATED_LINE_LOCATION_TABLE
+#endif // IDEAL_SINGLE_MEMPOD
 #endif  // MEMORY_USE_OS_TRANSPARENT_MANAGEMENT
 
+#if (IDEAL_SINGLE_MEMPOD == ENABLE)
+#else
 // Data block management granularity
 #define DATA_GRANULARITY_64B                (64u)
 #define DATA_GRANULARITY_128B               (128u)
@@ -84,6 +94,8 @@
 
 #define DATA_MANAGEMENT_OFFSET_BITS         (lg2(DATA_MANAGEMENT_GRANULARITY))  // data management granularity means how the hardware cluster the data
 #define DATA_GRANULARITY_IN_CACHE_LINE      (DATA_MANAGEMENT_GRANULARITY / DATA_GRANULARITY_64B)
+
+#endif // IDEAL_SINGLE_MEMPOD
 
 // CPU setting for branch_predictor (bimodal, gshare, hashed_perceptron, perceptron)
 #define BRANCH_USE_BIMODAL             (O3_CPU::bpred_t::bbranchDbimodal)
