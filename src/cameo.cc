@@ -53,6 +53,13 @@ bool OS_TRANSPARENT_MANAGEMENT::memory_activity_tracking(uint64_t address, uint8
     }
 #endif // TRACKING_LOAD_ONLY
 
+#if (TRACKING_READ_ONLY)
+    if (type == 2) // Memory Write is ignored
+    {
+        return true;
+    }
+#endif // TRACKING_READ_ONLY
+
     if (address >= total_capacity)
     {
         std::cout << __func__ << ": address input error." << std::endl;
