@@ -1,5 +1,5 @@
-#ifndef OS_TRANSPARENT_MANAGEMENT_H
-#define OS_TRANSPARENT_MANAGEMENT_H
+#ifndef IDEAL_SINGLE_MEMPOD_H
+#define IDEAL_SINGLE_MEMPOD_H
 #include <map>
 #include <vector>
 #include <iostream>
@@ -18,6 +18,11 @@
  *
 */
 
+/*
+    MemPod's MEA Counter tracks data segment at DATA_MANAGEMENT_GRANULARITY, 
+    and at Physical Address, not Hardware Address.
+*/
+
 #if (MEMORY_USE_OS_TRANSPARENT_MANAGEMENT == ENABLE)
 
 #if (IDEAL_SINGLE_MEMPOD == ENABLE)
@@ -31,10 +36,11 @@
 
 
 /* for mea_counter_table */
-#define NUMBER_MEA_COUNTER              (96)
+#define NUMBER_MEA_COUNTER              (64)
 #define MEA_COUNTER_WIDTH               uint8_t
-#define MEA_COUNTER_MAX_VALUE           (15u)
+#define MEA_COUNTER_MAX_VALUE           (4u)
 #define COUNTER_DEFAULT_VALUE           (0)
+#define MEA_COUNTER_RESET_EVERY_EPOCH   (ENABLE)
 
 /* for address_remapping_table */
 #define REMAPPING_TABLE_ENTRY_WIDTH     uint64_t
@@ -56,6 +62,7 @@ public:
     uint64_t fast_memory_capacity_at_granularity;
     uint8_t  fast_memory_offset_bit;    // address format in the data management granularity
     uint8_t  swap_size = SWAP_DATA_CACHE_LINES; // == 32
+    REMAPPING_TABLE_ENTRY_WIDTH swap_fm_address_itr = 0;
 
     /* Remapping request */
     struct RemappingRequest
@@ -63,6 +70,15 @@ public:
         uint64_t h_address_in_fm, h_address_in_sm;  // hardware address in fast and slow memories
         uint64_t p_address_in_fm, p_address_in_sm;  // physical address in fast and slow memories
         uint8_t size;   // number of cache lines to remap == 32 (2048B)
+    };
+
+    struct PhysicalHardwareAddressTuple
+    {
+        uint64_t p_address, h_address;
+
+        bool operator<( const PhysicalHardwareAddressTuple& right ) const {
+        return h_address == right.h_address ? p_address < right.p_address : h_address < right.h_address;
+        }
     };
 
     std::unordered_map<REMAPPING_TABLE_ENTRY_WIDTH, MEA_COUNTER_WIDTH>& mea_counter_table;
@@ -105,6 +121,7 @@ private:
     void determine_swap_pair(std::vector<REMAPPING_TABLE_ENTRY_WIDTH>& hot_pages);
     void get_victim_page_in_fm(std::vector<REMAPPING_TABLE_ENTRY_WIDTH>& victim_pages);
     void update_mea_counter(uint64_t segment_address);
+    void reset_mea_counter();
     void cancel_not_started_remapping_request(uint8_t swapping_states);
     bool enqueue_remapping_request(RemappingRequest& remapping_request);
 

@@ -87,7 +87,10 @@ void OS_TRANSPARENT_MANAGEMENT::update_mea_counter(uint64_t segment_address)
 
     if (mea_counter_table.count(segment_address) == 1)
     {
-        mea_counter_table[segment_address]++;
+        if (mea_counter_table[segment_address] < (MEA_COUNTER_MAX_VALUE + 1))
+        {
+            mea_counter_table[segment_address]++;
+        }
     }
     else if (mea_counter_table.count(segment_address) == 0)
     {
@@ -209,6 +212,11 @@ void OS_TRANSPARENT_MANAGEMENT::check_interval_swap(uint8_t swapping_states)
 
         /* set next interval */
         next_interval_cycle += interval_cycle;
+
+#if(MEA_COUNTER_RESET_EVERY_EPOCH)
+        reset_mea_counter();
+#endif // MEA_COUNTER_RESET_EVERY_EPOCH
+
     }
 };
 
@@ -293,48 +301,69 @@ void OS_TRANSPARENT_MANAGEMENT::get_hot_page_from_mea_counter(std::vector<REMAPP
     std::sort(hot_pages.begin(),hot_pages.end());
 };
 
+// complete
+void OS_TRANSPARENT_MANAGEMENT::reset_mea_counter()
+{   
+    mea_counter_table.clear();
+};
+
 // debugged
 void OS_TRANSPARENT_MANAGEMENT::determine_swap_pair(std::vector<REMAPPING_TABLE_ENTRY_WIDTH>& hot_pages)
 {   
-    REMAPPING_TABLE_ENTRY_WIDTH fm_address_itr = 0;
     REMAPPING_TABLE_ENTRY_WIDTH hot_page_h_address;
     REMAPPING_TABLE_ENTRY_WIDTH hot_page_p_address;
-    std::deque<REMAPPING_TABLE_ENTRY_WIDTH> hot_page_in_fm;
+    std::vector<REMAPPING_TABLE_ENTRY_WIDTH> hot_page_in_fm;
+    std::vector<PhysicalHardwareAddressTuple> hot_page_in_sm;
 
     for (uint8_t hot_page_itr = 0; hot_page_itr < hot_pages.size(); hot_page_itr++)
-    {     
+    { 
         hot_page_p_address = hot_pages[hot_page_itr];
         hot_page_h_address = address_remapping_table[hot_page_p_address];
+        PhysicalHardwareAddressTuple hot_page_ph_address;
+        hot_page_ph_address.h_address = hot_page_h_address;
+        hot_page_ph_address.p_address = hot_page_p_address;
+
         if (hot_page_h_address < fast_memory_capacity_at_granularity) // if hot_page in Fast Memory
         {
-            hot_page_in_fm.push_back(hot_page_h_address);
+            hot_page_in_fm.push_back(hot_page_ph_address.h_address);
         }
-        else if (hot_page_h_address < total_capacity_at_granularity)
-        {   
-            while (fm_address_itr == hot_page_in_fm.front())
-            {
-                fm_address_itr++;
-                hot_page_in_fm.pop_front();
-            }
-
-            RemappingRequest remapping_request;
-            remapping_request.p_address_in_fm = invert_address_remapping_table[fm_address_itr] << DATA_MANAGEMENT_OFFSET_BITS;
-            remapping_request.p_address_in_sm = hot_page_p_address << DATA_MANAGEMENT_OFFSET_BITS;
-            remapping_request.h_address_in_fm = fm_address_itr << DATA_MANAGEMENT_OFFSET_BITS;
-            remapping_request.h_address_in_sm = hot_page_h_address << DATA_MANAGEMENT_OFFSET_BITS;
-            remapping_request.size = SWAP_DATA_CACHE_LINES;
-            enqueue_remapping_request(remapping_request);
-#if (PRINT_SWAP_DETAIL)
-            swap_enqueued++;
-#endif
-            fm_address_itr++;
-
+        else if (hot_page_h_address < total_capacity_at_granularity) // if hot_page in Slow Memory
+        {  
+            hot_page_in_sm.push_back(hot_page_ph_address);
         }
         else
         {
             std::cout << __func__ << ": hot page range error" << std::endl;
             assert(0);            
         }
+    }
+    
+    std::sort(hot_page_in_fm.begin(),hot_page_in_fm.end());
+    std::sort(hot_page_in_sm.begin(),hot_page_in_sm.end());
+
+    for (uint8_t hot_page_in_sm_itr = 0; hot_page_in_sm_itr < hot_page_in_sm.size(); hot_page_in_sm_itr++)
+    {   
+        while (std::find(hot_page_in_fm.begin(), hot_page_in_fm.end(), swap_fm_address_itr) != hot_page_in_fm.end())
+        {
+            swap_fm_address_itr++;
+            printf("swap_fm_address_itr incremented \n");
+        }
+        
+        RemappingRequest remapping_request;
+        remapping_request.p_address_in_fm = invert_address_remapping_table[swap_fm_address_itr] << DATA_MANAGEMENT_OFFSET_BITS;
+        remapping_request.p_address_in_sm = hot_page_in_sm[hot_page_in_sm_itr].p_address << DATA_MANAGEMENT_OFFSET_BITS;
+        remapping_request.h_address_in_fm = swap_fm_address_itr << DATA_MANAGEMENT_OFFSET_BITS;
+        remapping_request.h_address_in_sm = hot_page_in_sm[hot_page_in_sm_itr].h_address << DATA_MANAGEMENT_OFFSET_BITS;
+        remapping_request.size = SWAP_DATA_CACHE_LINES;
+        enqueue_remapping_request(remapping_request);
+#if (PRINT_SWAP_DETAIL)
+        swap_enqueued++;
+#endif
+        swap_fm_address_itr++;
+
+        // if this iterator's value is over fast memory range, then swap_fm_address_itr = 0. (loop)
+        swap_fm_address_itr = swap_fm_address_itr % fast_memory_capacity_at_granularity;
+
     }
 };
 
