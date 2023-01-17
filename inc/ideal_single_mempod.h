@@ -31,7 +31,7 @@
 
 
 /* for mea_counter_table */
-#define NUMBER_MEA_COUNTER              (32)
+#define NUMBER_MEA_COUNTER              (96)
 #define MEA_COUNTER_WIDTH               uint8_t
 #define MEA_COUNTER_MAX_VALUE           (15u)
 #define COUNTER_DEFAULT_VALUE           (0)
