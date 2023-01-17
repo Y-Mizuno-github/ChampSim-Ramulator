@@ -19,6 +19,9 @@
 
 #if (MEMORY_USE_OS_TRANSPARENT_MANAGEMENT == ENABLE)
 
+#if (IDEAL_SINGLE_MEMPOD == ENABLE)
+#else
+
 #if (IDEAL_LINE_LOCATION_TABLE == ENABLE) || (COLOCATED_LINE_LOCATION_TABLE == ENABLE)
 #define COUNTER_WIDTH                   uint8_t
 #define COUNTER_MAX_VALUE               (UINT8_MAX)
@@ -216,8 +219,12 @@ public:
     OS_TRANSPARENT_MANAGEMENT(COUNTER_WIDTH threshold, uint64_t max_address, uint64_t fast_memory_max_address);
     ~OS_TRANSPARENT_MANAGEMENT();
 
+#if (TRACKING_LOAD_ONLY == ENABLE || TRACKING_READ_ONLY == ENABLE)
+    bool memory_activity_tracking(uint64_t address, uint8_t type, uint8_t type_origin, float queue_busy_degree);
+#else
     // address is physical address and at byte granularity
     bool memory_activity_tracking(uint64_t address, uint8_t type, float queue_busy_degree);
+#endif // TRACKING_LOAD_ONLY, TRACKING_READ_ONLY
 
     // translate the physical address to hardware address
     void physical_to_hardware_address(PACKET& packet);
@@ -252,6 +259,8 @@ private:
 #endif  // IDEAL_VARIABLE_GRANULARITY
 
 };
+
+#endif  // IDEAL_SINGLE_MEMPOD
 
 #endif  // MEMORY_USE_OS_TRANSPARENT_MANAGEMENT
 #endif  // OS_TRANSPARENT_MANAGEMENT_H

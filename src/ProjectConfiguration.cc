@@ -122,6 +122,12 @@ void output_champsim_statistics_deinitialization(OutputChampSimStatisticsFileTyp
     fprintf(outputchampsimstatistics.trace_file, "data_eviction_failure: %ld (%f).\n", outputchampsimstatistics.data_eviction_failure, outputchampsimstatistics.data_eviction_failure / float(total_access_request_in_memory));
     fprintf(outputchampsimstatistics.trace_file, "uncertain_counter: %ld (%f).\n", outputchampsimstatistics.uncertain_counter, outputchampsimstatistics.uncertain_counter / float(total_access_request_in_memory));
 
+#if (PRINT_SWAP_DETAIL)
+    fprintf(outputchampsimstatistics.trace_file, "swap_request: %ld \n", outputchampsimstatistics.swap_request);
+    fprintf(outputchampsimstatistics.trace_file, "swap_enqueued: %ld \n", outputchampsimstatistics.swap_enqueued);
+    fprintf(outputchampsimstatistics.trace_file, "swap_cancelled: %ld \n", outputchampsimstatistics.swap_cancelled);
+#endif
+
     fclose(outputchampsimstatistics.trace_file);
     printf("Output ChampSim statistics into %s.\n", outputchampsimstatistics.trace_string);
 
