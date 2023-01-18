@@ -496,7 +496,11 @@ int MEMORY_CONTROLLER<T, T2>::add_rq(PACKET* packet)
   /* Operate research proposals below */
 #if (MEMORY_USE_OS_TRANSPARENT_MANAGEMENT == ENABLE)
   os_transparent_management.physical_to_hardware_address(*packet);
+#if (TRACKING_LOAD_ONLY == ENABLE || TRACKING_READ_ONLY == ENABLE)
+  os_transparent_management.memory_activity_tracking(packet->address, type, packet->type_origin, float(get_occupancy(type, packet->address)) / get_size(type, packet->address));
+#else
   os_transparent_management.memory_activity_tracking(packet->address, type, float(get_occupancy(type, packet->address)) / get_size(type, packet->address));
+#endif  // TRACKING_LOAD_ONLY,TRACKING_READ_ONLY
 #endif  // MEMORY_USE_OS_TRANSPARENT_MANAGEMENT
 
 #if (MEMORY_USE_SWAPPING_UNIT == ENABLE)

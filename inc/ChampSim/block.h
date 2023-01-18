@@ -46,7 +46,7 @@ public:
 #if (MEMORY_USE_OS_TRANSPARENT_MANAGEMENT == ENABLE)
   uint64_t h_address = 0; // h_address (hardware address), which is the address used by memory chips
 #if (TRACKING_LOAD_ONLY == ENABLE || TRACKING_READ_ONLY == ENABLE)
-  uint64_t type_origin = 0
+  uint64_t type_origin = 0;
 #endif // TRACKING_LOAD_ONLY, TRACKING_READ_ONLY
 #if (COLOCATED_LINE_LOCATION_TABLE == ENABLE)
   uint64_t h_address_fm = 0;  // h_address_fm, corresponding hardware address in fast memory

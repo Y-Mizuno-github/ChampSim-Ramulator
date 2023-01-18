@@ -46,7 +46,7 @@
 
 /* Option for research */
 #define TRACKING_LOAD_ONLY                    (DISABLE)
-#define TRACKING_READ_ONLY                    (DISABLE)
+#define TRACKING_READ_ONLY                    (ENABLE)
 
 /* for test */
 #define TEST_OS_TRANSPARENT_MANAGEMENT        (DISABLE)
