@@ -389,9 +389,9 @@ bool CACHE::filllike_miss(std::size_t set, std::size_t way, PACKET& handle_pkt)
       writeback_packet.instr_id = handle_pkt.instr_id;
       writeback_packet.ip = 0;
       writeback_packet.type = WRITEBACK;
-#if (TRACKING_LOAD_ONLY == ENABLE || TRACKING_READ_ONLY == ENABLE)
+#if (TRACKING_LOAD_STORE_STATISTICS == ENABLE)
       writeback_packet.type_origin = WRITEBACK;
-#endif // TRACKING_LOAD_ONLY, TRACKING_READ_ONLY
+#endif // TRACKING_LOAD_STORE_STATISTICS
 
       auto result = lower_level->add_wq(&writeback_packet);
       if (result == -2)

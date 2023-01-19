@@ -52,7 +52,7 @@ OS_TRANSPARENT_MANAGEMENT::~OS_TRANSPARENT_MANAGEMENT()
     delete& invert_address_remapping_table;
 };
 
-#if (TRACKING_LOAD_ONLY == ENABLE || TRACKING_READ_ONLY == ENABLE)
+#if (TRACKING_LOAD_STORE_STATISTICS == ENABLE)
 // complete
 bool OS_TRANSPARENT_MANAGEMENT::memory_activity_tracking(uint64_t address, uint8_t type, uint8_t type_origin, float queue_busy_degree)
 {

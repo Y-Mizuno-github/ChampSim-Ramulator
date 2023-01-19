@@ -370,9 +370,9 @@ void O3_CPU::do_translate_fetch(champsim::circular_buffer<ooo_model_instr>::iter
   trace_packet.instr_id = begin->instr_id;
   trace_packet.ip = begin->ip;
   trace_packet.type = LOAD;
-#if (TRACKING_LOAD_ONLY == ENABLE || TRACKING_READ_ONLY == ENABLE)
+#if (TRACKING_LOAD_STORE_STATISTICS == ENABLE)
   trace_packet.type_origin = LOAD;
-#endif // TRACKING_LOAD_ONLY, TRACKING_READ_ONLY
+#endif // TRACKING_LOAD_STORE_STATISTICS
   trace_packet.asid[0] = 0;
   trace_packet.asid[1] = 0;
   trace_packet.to_return = {&ITLB_bus};
@@ -431,9 +431,9 @@ void O3_CPU::do_fetch_instruction(champsim::circular_buffer<ooo_model_instr>::it
   fetch_packet.instr_id = begin->instr_id;
   fetch_packet.ip = begin->ip;
   fetch_packet.type = LOAD;
-#if (TRACKING_LOAD_ONLY == ENABLE || TRACKING_READ_ONLY == ENABLE)
+#if (TRACKING_LOAD_STORE_STATISTICS == ENABLE)
   fetch_packet.type_origin = LOAD;
-#endif // TRACKING_LOAD_ONLY, TRACKING_READ_ONLY
+#endif // TRACKING_LOAD_STORE_STATISTICS
   fetch_packet.asid[0] = 0;
   fetch_packet.asid[1] = 0;
   fetch_packet.to_return = {&L1I_bus};
@@ -918,9 +918,9 @@ int O3_CPU::do_translate_store(std::vector<LSQ_ENTRY>::iterator sq_it)
   data_packet.instr_id = sq_it->instr_id;
   data_packet.ip = sq_it->ip;
   data_packet.type = RFO;
-#if (TRACKING_LOAD_ONLY == ENABLE || TRACKING_READ_ONLY == ENABLE)
+#if (TRACKING_LOAD_STORE_STATISTICS == ENABLE)
   data_packet.type_origin = RFO;
-#endif // TRACKING_LOAD_ONLY, TRACKING_READ_ONLY
+#endif // TRACKING_LOAD_STORE_STATISTICS
   data_packet.asid[0] = sq_it->asid[0];
   data_packet.asid[1] = sq_it->asid[1];
   data_packet.to_return = {&DTLB_bus};
@@ -990,9 +990,9 @@ int O3_CPU::do_translate_load(std::vector<LSQ_ENTRY>::iterator lq_it)
   data_packet.instr_id = lq_it->instr_id;
   data_packet.ip = lq_it->ip;
   data_packet.type = LOAD;
-#if (TRACKING_LOAD_ONLY == ENABLE || TRACKING_READ_ONLY == ENABLE)
+#if (TRACKING_LOAD_STORE_STATISTICS == ENABLE)
   data_packet.type_origin = LOAD;
-#endif // TRACKING_LOAD_ONLY, TRACKING_READ_ONLY
+#endif // TRACKING_LOAD_STORE_STATISTICS
   data_packet.asid[0] = lq_it->asid[0];
   data_packet.asid[1] = lq_it->asid[1];
   data_packet.to_return = {&DTLB_bus};
@@ -1022,9 +1022,9 @@ int O3_CPU::execute_load(std::vector<LSQ_ENTRY>::iterator lq_it)
   data_packet.instr_id = lq_it->instr_id;
   data_packet.ip = lq_it->ip;
   data_packet.type = LOAD;
-#if (TRACKING_LOAD_ONLY == ENABLE || TRACKING_READ_ONLY == ENABLE)
+#if (TRACKING_LOAD_STORE_STATISTICS == ENABLE)
   data_packet.type_origin = LOAD;
-#endif // TRACKING_LOAD_ONLY, TRACKING_READ_ONLY
+#endif // TRACKING_LOAD_STORE_STATISTICS
   data_packet.asid[0] = lq_it->asid[0];
   data_packet.asid[1] = lq_it->asid[1];
   data_packet.to_return = {&L1D_bus};
@@ -1251,9 +1251,9 @@ void O3_CPU::retire_rob()
         data_packet.instr_id = sq_it->instr_id;
         data_packet.ip = sq_it->ip;
         data_packet.type = RFO;
-#if (TRACKING_LOAD_ONLY == ENABLE || TRACKING_READ_ONLY == ENABLE)
+#if (TRACKING_LOAD_STORE_STATISTICS == ENABLE)
         data_packet.type_origin = RFO;
-#endif // TRACKING_LOAD_ONLY, TRACKING_READ_ONLY
+#endif // TRACKING_LOAD_STORE_STATISTICS
         data_packet.asid[0] = sq_it->asid[0];
         data_packet.asid[1] = sq_it->asid[1];
 

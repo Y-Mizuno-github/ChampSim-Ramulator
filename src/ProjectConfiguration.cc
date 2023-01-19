@@ -162,6 +162,13 @@ void output_champsim_statistics_initialization(const char* string)
     }
     outputchampsimstatistics.virtual_page_count = 0;
 
+#if (TRACKING_LOAD_STORE_STATISTICS == ENABLE)
+    outputchampsimstatistics.load_request_in_memory = 0;
+    outputchampsimstatistics.load_request_in_memory2 = 0;
+    outputchampsimstatistics.store_request_in_memory = 0;
+    outputchampsimstatistics.store_request_in_memory2 = 0;
+#endif // TRACKING_LOAD_STORE_STATISTICS
+
     outputchampsimstatistics.read_request_in_memory = 0;
     outputchampsimstatistics.read_request_in_memory2 = 0;
     outputchampsimstatistics.write_request_in_memory = 0;
@@ -189,6 +196,16 @@ void output_champsim_statistics_deinitialization(OutputChampSimStatisticsFileTyp
     uint64_t total_access_request_in_memory = outputchampsimstatistics.read_request_in_memory + outputchampsimstatistics.read_request_in_memory2 + outputchampsimstatistics.write_request_in_memory + outputchampsimstatistics.write_request_in_memory2;
 
     fprintf(outputchampsimstatistics.trace_file, "\n\nInformation about memory controller\n\n");
+
+#if (TRACKING_LOAD_STORE_STATISTICS == ENABLE)
+    fprintf(outputchampsimstatistics.trace_file, "load_request_in_memory: %ld, load_request_in_memory2: %ld.\n", outputchampsimstatistics.load_request_in_memory, outputchampsimstatistics.load_request_in_memory2);
+    fprintf(outputchampsimstatistics.trace_file, "store_request_in_memory: %ld, store_request_in_memory2: %ld.\n", outputchampsimstatistics.store_request_in_memory, outputchampsimstatistics.store_request_in_memory2);
+    fprintf(outputchampsimstatistics.trace_file, "load_hit_rate: %f\n", float(outputchampsimstatistics.load_request_in_memory) / (outputchampsimstatistics.load_request_in_memory + outputchampsimstatistics.load_request_in_memory2));
+    fprintf(outputchampsimstatistics.trace_file, "store_hit_rate: %f\n", float(outputchampsimstatistics.store_request_in_memory) / (outputchampsimstatistics.store_request_in_memory + outputchampsimstatistics.store_request_in_memory2));
+    fprintf(outputchampsimstatistics.trace_file, "read_hit_rate: %f\n", float(outputchampsimstatistics.read_request_in_memory) / (outputchampsimstatistics.read_request_in_memory + outputchampsimstatistics.read_request_in_memory2));
+    fprintf(outputchampsimstatistics.trace_file, "write_hit_rate: %f\n", float(outputchampsimstatistics.write_request_in_memory) / (outputchampsimstatistics.write_request_in_memory + outputchampsimstatistics.write_request_in_memory2));
+#endif // TRACKING_LOAD_STORE_STATISTICS
+
     fprintf(outputchampsimstatistics.trace_file, "read_request_in_memory: %ld, read_request_in_memory2: %ld.\n", outputchampsimstatistics.read_request_in_memory, outputchampsimstatistics.read_request_in_memory2);
     fprintf(outputchampsimstatistics.trace_file, "write_request_in_memory: %ld, write_request_in_memory2: %ld.\n", outputchampsimstatistics.write_request_in_memory, outputchampsimstatistics.write_request_in_memory2);
     fprintf(outputchampsimstatistics.trace_file, "hit rate: %f.\n", (outputchampsimstatistics.read_request_in_memory + outputchampsimstatistics.write_request_in_memory) / float(total_access_request_in_memory));
