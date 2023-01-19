@@ -47,6 +47,85 @@ void output_memory_trace_hexadecimal(OutputMemoryTraceFileType& outputmemorytrac
     fprintf(outputmemorytrace.trace_file, "0x%lx %c\n", address, type);
 }
 
+#if (CPU_USE_MULTIPLE_CORES == ENABLE)
+void output_champsim_statistics_initialization(const char* string1, const char* string2)
+{
+    /* string 1 */
+    char* string1_2 = (char*)malloc(strlen(string1) + 1);
+    strcpy(string1_2, string1);
+
+    const char* delimiter = "/";
+    char* token1;
+    char* last_token1 = (char*)malloc(strlen(string1) + 1);
+
+    /* get the first token */
+    token1 = strtok(string1_2, delimiter);
+
+    /* walk through other tokens */
+    while (token1 != NULL)
+    {
+        last_token1 = token1;
+        token1 = strtok(NULL, delimiter);
+    }
+
+    /* string 2 */
+    char* string2_2 = (char*)malloc(strlen(string2) + 1);
+    strcpy(string2_2, string2);
+
+    char* token2;
+    char* last_token2 = (char*)malloc(strlen(string2) + 1);
+
+    /* get the first token */
+    token2 = strtok(string2_2, delimiter);
+
+    /* walk through other tokens */
+    while (token2 != NULL)
+    {
+        last_token2 = token2;
+        token2 = strtok(NULL, delimiter);
+    }
+
+    // append file_extension to string3.
+    const char* file_extension = ".statistics";
+
+    char* number_workload1 = (char*)malloc(strlen(last_token1) + 1);
+    char* number_workload2 = (char*)malloc(strlen(last_token2) + 1);
+
+    strncpy(number_workload1, last_token1, 3);
+    number_workload1[3] = '\0';
+    strncpy(number_workload2, last_token2, 3);
+    number_workload2[3] = '\0';
+
+    char* string3 = (char*)malloc(strlen(number_workload1) + strlen(number_workload2) + 1 + strlen(file_extension));
+    strcpy(string3, number_workload1);
+    strcat(string3, number_workload2);
+    strcat(string3, file_extension);
+
+    outputchampsimstatistics.trace_file = fopen(string3, "w");
+    outputchampsimstatistics.trace_string = (char*)malloc(strlen(string3) + 1);
+    strcpy(outputchampsimstatistics.trace_string, string3);
+
+    /* Initialize variabes */
+    for (uint64_t i = 0; i < outputchampsimstatistics.valid_pte_count.size(); i++)
+    {
+        outputchampsimstatistics.valid_pte_count[i] = 0;
+    }
+    outputchampsimstatistics.virtual_page_count = 0;
+
+    outputchampsimstatistics.read_request_in_memory = 0;
+    outputchampsimstatistics.read_request_in_memory2 = 0;
+    outputchampsimstatistics.write_request_in_memory = 0;
+    outputchampsimstatistics.write_request_in_memory2 = 0;
+
+    outputchampsimstatistics.remapping_request_queue_congestion = 0;
+    outputchampsimstatistics.no_free_space_for_migration = 0;
+    outputchampsimstatistics.no_invalid_group_for_migration = 0;
+    outputchampsimstatistics.unexpandable_since_start_address = 0;
+    outputchampsimstatistics.unexpandable_since_no_invalid_group = 0;
+    outputchampsimstatistics.data_eviction_success = outputchampsimstatistics.data_eviction_failure = 0;
+    outputchampsimstatistics.uncertain_counter = 0;
+}
+#else
 void output_champsim_statistics_initialization(const char* string)
 {
     char* string2 = (char*)malloc(strlen(string) + 1);
@@ -96,6 +175,7 @@ void output_champsim_statistics_initialization(const char* string)
     outputchampsimstatistics.data_eviction_success = outputchampsimstatistics.data_eviction_failure = 0;
     outputchampsimstatistics.uncertain_counter = 0;
 }
+#endif
 
 void output_champsim_statistics_deinitialization(OutputChampSimStatisticsFileType& outputchampsimstatistics)
 {

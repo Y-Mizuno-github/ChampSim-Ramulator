@@ -367,12 +367,18 @@ int main(int argc, char** argv)
 
 #if (USER_CODES == ENABLE)
 #if (PRINT_MEMORY_TRACE == ENABLE)
+#if (CPU_USE_MULTIPLE_CORES == ENABLE)
   // prepare file for recording memory traces.
   output_memory_trace_initialization(argv[start_position_of_traces]);
+#endif
 #endif  // PRINT_MEMORY_TRACE
 
 #if (PRINT_STATISTICS_INTO_FILE == ENABLE)
+#if (CPU_USE_MULTIPLE_CORES == ENABLE)
+  output_champsim_statistics_initialization(argv[start_position_of_traces],argv[start_position_of_traces+1u]);
+#else
   output_champsim_statistics_initialization(argv[start_position_of_traces]);
+#endif
   fprintf(outputchampsimstatistics.trace_file, "\n*** ChampSim Multicore Out-of-Order Simulator ***\n\n");
 #endif  // PRINT_STATISTICS_INTO_FILE
 

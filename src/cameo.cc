@@ -15,6 +15,12 @@ OS_TRANSPARENT_MANAGEMENT::OS_TRANSPARENT_MANAGEMENT(COUNTER_WIDTH threshold, ui
 {
     remapping_request_queue_congestion = 0;
 
+#if (PRINT_SWAP_DETAIL)
+    swap_request = 0;
+    swap_enqueued = 0;
+    swap_cancelled = 0;
+#endif // PRINT_SWAP_DETAIL
+
     uint64_t expected_number_in_congruence_group = total_capacity / fast_memory_capacity;
     if (expected_number_in_congruence_group > REMAPPING_LOCATION_WIDTH(RemappingLocation::Max))
     {
@@ -30,6 +36,13 @@ OS_TRANSPARENT_MANAGEMENT::OS_TRANSPARENT_MANAGEMENT(COUNTER_WIDTH threshold, ui
 OS_TRANSPARENT_MANAGEMENT::~OS_TRANSPARENT_MANAGEMENT()
 {
     outputchampsimstatistics.remapping_request_queue_congestion = remapping_request_queue_congestion;
+
+#if (PRINT_SWAP_DETAIL)
+    outputchampsimstatistics.swap_request = swap_request;
+    outputchampsimstatistics.swap_enqueued = swap_enqueued;
+    outputchampsimstatistics.swap_cancelled = swap_cancelled;
+#endif // PRINT_SWAP_DETAIL
+
     delete& counter_table;
     delete& hotness_table;
     delete& line_location_table;
@@ -436,6 +449,9 @@ bool OS_TRANSPARENT_MANAGEMENT::enqueue_remapping_request(RemappingRequest& rema
     }
 
     // new remapping request is issued.
+#if (PRINT_SWAP_DETAIL)
+    swap_request++;
+#endif
     return true;
 }
 

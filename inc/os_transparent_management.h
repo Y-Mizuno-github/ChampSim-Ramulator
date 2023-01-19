@@ -105,6 +105,12 @@ public:
     };
     std::deque<RemappingRequest> remapping_request_queue;
     uint64_t remapping_request_queue_congestion;
+    
+#if (PRINT_SWAP_DETAIL)
+    uint64_t swap_request;
+    uint64_t swap_enqueued;
+    uint64_t swap_cancelled;
+#endif // PRINT_SWAP_DETAIL
 
 #if (IDEAL_LINE_LOCATION_TABLE == ENABLE) || (COLOCATED_LINE_LOCATION_TABLE == ENABLE)
     // scoped enumerations

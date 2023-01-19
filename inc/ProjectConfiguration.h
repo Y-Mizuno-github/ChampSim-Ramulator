@@ -16,7 +16,7 @@
 #define PRINT_MEMORY_TRACE                         (DISABLE) // whether print memory trace into files
 #define MEMORY_USE_SWAPPING_UNIT                   (ENABLE) // whether memory controller uses swapping unit to swap data (data swapping overhead is considered)
 #define MEMORY_USE_OS_TRANSPARENT_MANAGEMENT       (ENABLE) // whether memory controller uses OS-transparent management designs to simulate the memory system instead of static (no-migration) methods
-#define CPU_USE_MULTIPLE_CORES                     (DISABLE) // whether CPU uses multiple cores to run simulation (go to ./inc/ChampSim/champsim_constants.h to check related parameters)
+#define CPU_USE_MULTIPLE_CORES                     (ENABLE) // whether CPU uses multiple cores to run simulation (go to ./inc/ChampSim/champsim_constants.h to check related parameters)
 #define PRINT_SWAP_DETAIL                          (ENABLE)
 
 #if (MEMORY_USE_HYBRID == ENABLE)
@@ -46,7 +46,7 @@
 
 /* Option for research */
 #define TRACKING_LOAD_ONLY                    (DISABLE)
-#define TRACKING_READ_ONLY                    (ENABLE)
+#define TRACKING_READ_ONLY                    (DISABLE)
 
 /* for test */
 #define TEST_OS_TRANSPARENT_MANAGEMENT        (DISABLE)
@@ -216,12 +216,16 @@ typedef struct
 } OutputChampSimStatisticsFileType;
 
 /* Declaration (C style) */
-
 void output_memory_trace_initialization(const char* string);
 void output_memory_trace_deinitialization(OutputMemoryTraceFileType& outputmemorytrace);
 void output_memory_trace_hexadecimal(OutputMemoryTraceFileType& outputmemorytrace, uint64_t address, char type);
 
+#if (CPU_USE_MULTIPLE_CORES == ENABLE)
+void output_champsim_statistics_initialization(const char* string, const char* string2);
+#else
 void output_champsim_statistics_initialization(const char* string);
+#endif
+
 void output_champsim_statistics_deinitialization(OutputChampSimStatisticsFileType& outputchampsimstatistics);
 
 extern OutputMemoryTraceFileType outputmemorytrace_one;
