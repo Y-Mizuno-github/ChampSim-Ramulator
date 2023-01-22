@@ -249,12 +249,16 @@ MEMORY_CONTROLLER<T, T2>::MEMORY_CONTROLLER(double freq_scale, double clock_scal
   printf("clock_scale: %f, clock_scale2: %f.\n", clock_scale, clock_scale2);
 
 #if (TRACKING_LOAD_STORE_STATISTICS == ENABLE)
-  load_request_in_memory = load_request_in_memory2 = 0;
-  store_request_in_memory = store_request_in_memory2 = 0;
+  load_request_in_memory = 0;
+  load_request_in_memory2 = 0;
+  store_request_in_memory = 0;
+  store_request_in_memory2 = 0;
 #endif // TRACKING_LOAD_STORE_STATISTICS
 
-  read_request_in_memory = read_request_in_memory2 = 0;
-  write_request_in_memory = write_request_in_memory2 = 0;
+  read_request_in_memory = 0;
+  read_request_in_memory2 = 0;
+  write_request_in_memory = 0;
+  write_request_in_memory2 = 0;
 
 #if (MEMORY_USE_SWAPPING_UNIT == ENABLE)
   initialize_swapping();
@@ -276,6 +280,8 @@ MEMORY_CONTROLLER<T, T2>::~MEMORY_CONTROLLER()
 #if (TRACKING_LOAD_STORE_STATISTICS == ENABLE)
   outputchampsimstatistics.load_request_in_memory = load_request_in_memory;
   outputchampsimstatistics.store_request_in_memory = store_request_in_memory;
+  outputchampsimstatistics.load_request_in_memory2 = load_request_in_memory2;
+  outputchampsimstatistics.store_request_in_memory2 = store_request_in_memory2;
 #endif // TRACKING_LOAD_STORE_STATISTICS
 
   outputchampsimstatistics.read_request_in_memory = read_request_in_memory;
@@ -505,6 +511,8 @@ int MEMORY_CONTROLLER<T, T2>::add_rq(PACKET* packet)
   uint64_t type_origin = packet->type_origin;
 #endif // TRACKING_LOAD_STORE_STATISTICS
 
+#if (MEMORY_USE_OS_TRANSPARENT_MANAGEMENT == ENABLE && IDEAL_SINGLE_MEMPOD == ENABLE)
+#else
   if (all_warmup_complete < NUM_CPUS)
   {
     for (auto ret : packet->to_return)
@@ -512,6 +520,7 @@ int MEMORY_CONTROLLER<T, T2>::add_rq(PACKET* packet)
 
     return int(ReturnValue::Forward); // Fast-forward
   }
+#endif // MEMORY_USE_OS_TRANSPARENT_MANAGEMENT, IDEAL_SINGLE_MEMPOD
 
   /* Operate research proposals below */
 #if (MEMORY_USE_OS_TRANSPARENT_MANAGEMENT == ENABLE)
@@ -520,8 +529,18 @@ int MEMORY_CONTROLLER<T, T2>::add_rq(PACKET* packet)
   os_transparent_management.memory_activity_tracking(packet->address, type, packet->type_origin, float(get_occupancy(type, packet->address)) / get_size(type, packet->address));
 #else
   os_transparent_management.memory_activity_tracking(packet->address, type, float(get_occupancy(type, packet->address)) / get_size(type, packet->address));
-#endif  // TRACKING_LOAD_ONLY,TRACKING_READ_ONLY
+#endif  // TRACKING_LOAD_STORE_STATISTICS
 #endif  // MEMORY_USE_OS_TRANSPARENT_MANAGEMENT
+
+#if (IDEAL_SINGLE_MEMPOD == ENABLE)
+  if (all_warmup_complete < NUM_CPUS)
+  {
+    for (auto ret : packet->to_return)
+      ret->return_data(packet);
+
+    return int(ReturnValue::Forward); // Fast-forward
+  }
+#endif // IDEAL_SINGLE_MEMPOD == ENABLE
 
 #if (MEMORY_USE_SWAPPING_UNIT == ENABLE)
   /* Check swapping below */
@@ -632,6 +651,10 @@ int MEMORY_CONTROLLER<T, T2>::add_rq(PACKET* packet)
       {
         store_request_in_memory2++;
       }
+      else
+      {
+        printf("%s: Error!\n", __FUNCTION__);
+      }
 #endif // TRACKING_LOAD_STORE_STATISTICS
     }
   }
@@ -660,8 +683,11 @@ int MEMORY_CONTROLLER<T, T2>::add_wq(PACKET* packet)
 {
   const static uint8_t type = 2;  // it means the input request is write request.
 
+#if (MEMORY_USE_OS_TRANSPARENT_MANAGEMENT == ENABLE && IDEAL_SINGLE_MEMPOD == ENABLE)
+#else
   if (all_warmup_complete < NUM_CPUS)
     return int(ReturnValue::Forward); // Fast-forward
+#endif // MEMORY_USE_OS_TRANSPARENT_MANAGEMENT, IDEAL_SINGLE_MEMPOD
 
   /* Operate research proposals below */
 #if (MEMORY_USE_OS_TRANSPARENT_MANAGEMENT == ENABLE)
@@ -670,8 +696,13 @@ int MEMORY_CONTROLLER<T, T2>::add_wq(PACKET* packet)
   os_transparent_management.memory_activity_tracking(packet->address, type, packet->type_origin, float(get_occupancy(type, packet->address)) / get_size(type, packet->address));
 #else
   os_transparent_management.memory_activity_tracking(packet->address, type, float(get_occupancy(type, packet->address)) / get_size(type, packet->address));
-#endif  // TRACKING_LOAD_ONLY,TRACKING_READ_ONLY
+#endif  // TRACKING_LOAD_STORE_STATISTICS
 #endif  // MEMORY_USE_OS_TRANSPARENT_MANAGEMENT
+
+#if (IDEAL_SINGLE_MEMPOD == ENABLE)
+  if (all_warmup_complete < NUM_CPUS)
+    return int(ReturnValue::Forward); // Fast-forward
+#endif // IDEAL_SINGLE_MEMPOD
 
 #if (MEMORY_USE_SWAPPING_UNIT == ENABLE)
   /* Check swapping below */

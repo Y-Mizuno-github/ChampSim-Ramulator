@@ -36,7 +36,7 @@
 
 
 /* for mea_counter_table */
-#define NUMBER_MEA_COUNTER              (64)
+#define NUMBER_MEA_COUNTER              (256u)
 #define MEA_COUNTER_WIDTH               uint8_t
 #define MEA_COUNTER_MAX_VALUE           (4u)
 #define COUNTER_DEFAULT_VALUE           (0)
@@ -51,6 +51,8 @@
 
 #define INCOMPLETE_READ_REQUEST_QUEUE_LENGTH    (128)
 #define INCOMPLETE_WRITE_REQUEST_QUEUE_LENGTH   (128)
+
+extern uint8_t all_warmup_complete;
 
 class OS_TRANSPARENT_MANAGEMENT
 {
@@ -89,13 +91,14 @@ public:
     uint64_t remapping_request_queue_congestion;
 
 #if (PRINT_SWAP_DETAIL)
-    uint64_t swap_request;
-    uint64_t swap_enqueued;
-    uint64_t swap_cancelled;
+    uint32_t swap_request;
+    uint32_t swap_enqueued;
+    uint32_t swap_cancelled;
 #endif // PRINT_SWAP_DETAIL
 
-    double interval_cycle = CPU_FREQUENCY * (double)TIME_INTERVAL_MEMPOD_us / MEMORY_CONTROLLER_CLOCK_SCALE;
-    double next_interval_cycle = interval_cycle;
+    double interval_cycle;
+    double next_interval_cycle;
+    uint32_t intervals;
 
     /* Member functions */
     OS_TRANSPARENT_MANAGEMENT(uint64_t max_address, uint64_t fast_memory_max_address);
@@ -124,13 +127,10 @@ public:
 private:
     void get_hot_page_from_mea_counter(std::vector<REMAPPING_TABLE_ENTRY_WIDTH>& hot_pages);
     void determine_swap_pair(std::vector<REMAPPING_TABLE_ENTRY_WIDTH>& hot_pages);
-    void get_victim_page_in_fm(std::vector<REMAPPING_TABLE_ENTRY_WIDTH>& victim_pages);
     void update_mea_counter(uint64_t segment_address);
     void reset_mea_counter();
     void cancel_not_started_remapping_request(uint8_t swapping_states);
     bool enqueue_remapping_request(RemappingRequest& remapping_request);
-
-
 };
 
 #endif  // IDEAL_SINGLE_MEMPOD

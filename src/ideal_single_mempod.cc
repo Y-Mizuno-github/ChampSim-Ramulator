@@ -14,6 +14,11 @@ OS_TRANSPARENT_MANAGEMENT::OS_TRANSPARENT_MANAGEMENT(uint64_t max_address, uint6
     invert_address_remapping_table(*(new std::unordered_map<REMAPPING_TABLE_ENTRY_WIDTH, REMAPPING_TABLE_ENTRY_WIDTH>()))
 {
     remapping_request_queue_congestion = 0;
+    intervals = 1;
+
+    interval_cycle = CPU_FREQUENCY * (double)TIME_INTERVAL_MEMPOD_us / MEMORY_CONTROLLER_CLOCK_SCALE;
+    next_interval_cycle = interval_cycle;
+
 #if (PRINT_SWAP_DETAIL)
     swap_request = 0;
     swap_enqueued = 0;
@@ -223,12 +228,17 @@ void OS_TRANSPARENT_MANAGEMENT::check_interval_swap(uint8_t swapping_states)
         cancel_not_started_remapping_request(swapping_states);
 
         /* get hot pages and victim pages */
-        std::vector<REMAPPING_TABLE_ENTRY_WIDTH> hot_pages = *(new std::vector<REMAPPING_TABLE_ENTRY_WIDTH>(mea_counter_table.size()));
+        std::vector<REMAPPING_TABLE_ENTRY_WIDTH> hot_pages(mea_counter_table.size());
         get_hot_page_from_mea_counter(hot_pages);
         determine_swap_pair(hot_pages);
 
         /* set next interval */
         next_interval_cycle += interval_cycle;
+
+        if (all_warmup_complete > NUM_CPUS)
+        {
+            intervals++;
+        }
 
 #if(MEA_COUNTER_RESET_EVERY_EPOCH)
         reset_mea_counter();
@@ -295,13 +305,19 @@ bool OS_TRANSPARENT_MANAGEMENT::enqueue_remapping_request(RemappingRequest& rema
         remapping_request_queue.push_back(remapping_request);
     }
     else
-    {
-        remapping_request_queue_congestion++;
+    {   
+        if (all_warmup_complete > NUM_CPUS)
+        {
+            remapping_request_queue_congestion++;
+        }
     }
 
     // new remapping request is issued.
 #if (PRINT_SWAP_DETAIL)
-    swap_request++;
+    if (all_warmup_complete > NUM_CPUS)
+    {
+        swap_request++;
+    }
 #endif
     return true;
 }
@@ -326,20 +342,23 @@ void OS_TRANSPARENT_MANAGEMENT::reset_mea_counter()
 
 // debugged
 void OS_TRANSPARENT_MANAGEMENT::determine_swap_pair(std::vector<REMAPPING_TABLE_ENTRY_WIDTH>& hot_pages)
-{   
+{
+
+#if (PRINT_SWAPS_PER_EPOCH_MEMPOD == ENABLE)
+    uint32_t swaps_per_epoch = 0;
+#endif // PRINT_SWAPS_PER_EPOCH_MEMPOD
+
     REMAPPING_TABLE_ENTRY_WIDTH hot_page_h_address;
     REMAPPING_TABLE_ENTRY_WIDTH hot_page_p_address;
     std::vector<REMAPPING_TABLE_ENTRY_WIDTH> hot_page_in_fm;
     std::vector<PhysicalHardwareAddressTuple> hot_page_in_sm;
-
-    for (uint8_t hot_page_itr = 0; hot_page_itr < hot_pages.size(); hot_page_itr++)
-    { 
+    for (uint32_t hot_page_itr = 0; hot_page_itr < hot_pages.size(); hot_page_itr++)
+    {   
         hot_page_p_address = hot_pages[hot_page_itr];
         hot_page_h_address = address_remapping_table[hot_page_p_address];
         PhysicalHardwareAddressTuple hot_page_ph_address;
         hot_page_ph_address.h_address = hot_page_h_address;
         hot_page_ph_address.p_address = hot_page_p_address;
-
         if (hot_page_h_address < fast_memory_capacity_at_granularity) // if hot_page in Fast Memory
         {
             hot_page_in_fm.push_back(hot_page_ph_address.h_address);
@@ -363,7 +382,7 @@ void OS_TRANSPARENT_MANAGEMENT::determine_swap_pair(std::vector<REMAPPING_TABLE_
         while (std::find(hot_page_in_fm.begin(), hot_page_in_fm.end(), swap_fm_address_itr) != hot_page_in_fm.end())
         {
             swap_fm_address_itr++;
-            printf("swap_fm_address_itr incremented \n");
+            //printf("swap_fm_address_itr incremented \n");
         }
         
         RemappingRequest remapping_request;
@@ -373,8 +392,16 @@ void OS_TRANSPARENT_MANAGEMENT::determine_swap_pair(std::vector<REMAPPING_TABLE_
         remapping_request.h_address_in_sm = hot_page_in_sm[hot_page_in_sm_itr].h_address << DATA_MANAGEMENT_OFFSET_BITS;
         remapping_request.size = SWAP_DATA_CACHE_LINES;
         enqueue_remapping_request(remapping_request);
+
+#if (PRINT_SWAPS_PER_EPOCH_MEMPOD == ENABLE)
+        swaps_per_epoch++;
+#endif // PRINT_SWAPS_PER_EPOCH_MEMPOD
+
 #if (PRINT_SWAP_DETAIL)
-        swap_enqueued++;
+        if (all_warmup_complete > NUM_CPUS)
+        {
+            swap_enqueued++;
+        }
 #endif
         swap_fm_address_itr++;
 
@@ -382,6 +409,13 @@ void OS_TRANSPARENT_MANAGEMENT::determine_swap_pair(std::vector<REMAPPING_TABLE_
         swap_fm_address_itr = swap_fm_address_itr % fast_memory_capacity_at_granularity;
 
     }
+
+#if (PRINT_SWAPS_PER_EPOCH_MEMPOD == ENABLE)
+        if (all_warmup_complete > NUM_CPUS)
+        {
+            printf("[SWAPS_PER_EPOCH] interval: %u swaps: %u \n",intervals,swaps_per_epoch);
+        }
+#endif // PRINT_SWAPS_PER_EPOCH_MEMPOD
 };
 
 // complete
@@ -392,7 +426,10 @@ void OS_TRANSPARENT_MANAGEMENT::cancel_not_started_remapping_request(uint8_t swa
         case 0: // the swapping unit is idle
             {   
 #if (PRINT_SWAP_DETAIL)
-                swap_cancelled += remapping_request_queue.size();
+                if (all_warmup_complete > NUM_CPUS)
+                {
+                    swap_cancelled += remapping_request_queue.size();
+                }
 #endif
                 remapping_request_queue.clear();
                 break;
@@ -400,7 +437,10 @@ void OS_TRANSPARENT_MANAGEMENT::cancel_not_started_remapping_request(uint8_t swa
         case 1: // the swapping unit is busy
             {  
 #if (PRINT_SWAP_DETAIL) 
-                swap_cancelled += (remapping_request_queue.size() - 1);
+                if (all_warmup_complete > NUM_CPUS)
+                {
+                    swap_cancelled += (remapping_request_queue.size() - 1);
+                }
 #endif
                 RemappingRequest remapping_request_in_progress = remapping_request_queue.front();
                 remapping_request_queue.clear();
@@ -410,7 +450,10 @@ void OS_TRANSPARENT_MANAGEMENT::cancel_not_started_remapping_request(uint8_t swa
         case 2: // the swapping unit finishes a swapping request
             {   
 #if (PRINT_SWAP_DETAIL)
-                swap_cancelled += remapping_request_queue.size();
+                if (all_warmup_complete > NUM_CPUS)
+                {
+                    swap_cancelled += remapping_request_queue.size();
+                }
 #endif
                 remapping_request_queue.clear();
                 break;

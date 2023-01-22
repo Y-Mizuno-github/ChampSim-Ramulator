@@ -44,16 +44,18 @@
 #define IDEAL_VARIABLE_GRANULARITY            (DISABLE)
 #define IDEAL_SINGLE_MEMPOD                   (ENABLE)
 
-/* Option for research */
-#define TRACKING_LOAD_ONLY                    (ENABLE)
-#define TRACKING_READ_ONLY                    (DISABLE)
-
 #define TRACKING_LOAD_STORE_STATISTICS        (ENABLE)
+#if (TRACKING_LOAD_STORE_STATISTICS == ENABLE)
+/* Option for research */
+#define TRACKING_LOAD_ONLY                    (DISABLE)
+#define TRACKING_READ_ONLY                    (DISABLE)
+#endif // TRACKING_LOAD_STORE_STATISTICS 
 
 /* for test */
 #define TEST_OS_TRANSPARENT_MANAGEMENT        (DISABLE)
 
 #if (IDEAL_SINGLE_MEMPOD == ENABLE)
+#define PRINT_SWAPS_PER_EPOCH_MEMPOD          (DISABLE)
 #else
 #if (IDEAL_LINE_LOCATION_TABLE == ENABLE) || (COLOCATED_LINE_LOCATION_TABLE == ENABLE)
 #define HOTNESS_THRESHOLD                     (1u)
