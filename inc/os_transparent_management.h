@@ -82,6 +82,8 @@
 
 #endif  // IDEAL_VARIABLE_GRANULARITY
 
+extern uint8_t all_warmup_complete;
+
 class OS_TRANSPARENT_MANAGEMENT
 {
 public:

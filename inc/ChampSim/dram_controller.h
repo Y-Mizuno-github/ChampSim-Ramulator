@@ -511,7 +511,7 @@ int MEMORY_CONTROLLER<T, T2>::add_rq(PACKET* packet)
   uint64_t type_origin = packet->type_origin;
 #endif // TRACKING_LOAD_STORE_STATISTICS
 
-#if (MEMORY_USE_OS_TRANSPARENT_MANAGEMENT == ENABLE && IDEAL_SINGLE_MEMPOD == ENABLE)
+#if (MEMORY_USE_OS_TRANSPARENT_MANAGEMENT == ENABLE)
 #else
   if (all_warmup_complete < NUM_CPUS)
   {
@@ -520,7 +520,7 @@ int MEMORY_CONTROLLER<T, T2>::add_rq(PACKET* packet)
 
     return int(ReturnValue::Forward); // Fast-forward
   }
-#endif // MEMORY_USE_OS_TRANSPARENT_MANAGEMENT, IDEAL_SINGLE_MEMPOD
+#endif // MEMORY_USE_OS_TRANSPARENT_MANAGEMENT
 
   /* Operate research proposals below */
 #if (MEMORY_USE_OS_TRANSPARENT_MANAGEMENT == ENABLE)
@@ -532,6 +532,7 @@ int MEMORY_CONTROLLER<T, T2>::add_rq(PACKET* packet)
 #endif  // TRACKING_LOAD_STORE_STATISTICS
 #endif  // MEMORY_USE_OS_TRANSPARENT_MANAGEMENT
 
+/* Disable Warmup Fast-Forward
 #if (IDEAL_SINGLE_MEMPOD == ENABLE)
   if (all_warmup_complete < NUM_CPUS)
   {
@@ -541,6 +542,7 @@ int MEMORY_CONTROLLER<T, T2>::add_rq(PACKET* packet)
     return int(ReturnValue::Forward); // Fast-forward
   }
 #endif // IDEAL_SINGLE_MEMPOD == ENABLE
+*/
 
 #if (MEMORY_USE_SWAPPING_UNIT == ENABLE)
   /* Check swapping below */
@@ -604,16 +606,22 @@ int MEMORY_CONTROLLER<T, T2>::add_rq(PACKET* packet)
 
     if (stall == false)
     {
-      read_request_in_memory++;
+      if (all_warmup_complete > NUM_CPUS)
+      {
+        read_request_in_memory++;
+      }
 
 #if (TRACKING_LOAD_STORE_STATISTICS == ENABLE)
-      if (type_origin == LOAD || type_origin == TRANSLATION)
+      if (all_warmup_complete > NUM_CPUS)
       {
-        load_request_in_memory++;
-      }
-      else if (type_origin == RFO)
-      {
-        store_request_in_memory++;
+        if (type_origin == LOAD || type_origin == TRANSLATION)
+        {
+          load_request_in_memory++;
+        }
+        else if (type_origin == RFO)
+        {
+          store_request_in_memory++;
+        }
       }
 #endif // TRACKING_LOAD_STORE_STATISTICS
 
@@ -640,20 +648,26 @@ int MEMORY_CONTROLLER<T, T2>::add_rq(PACKET* packet)
 
     if (stall == false)
     {
-      read_request_in_memory2++;
+      if (all_warmup_complete > NUM_CPUS)
+      {
+        read_request_in_memory2++;
+      }
 
 #if (TRACKING_LOAD_STORE_STATISTICS == ENABLE)
-      if (type_origin == LOAD || type_origin == TRANSLATION)
+      if (all_warmup_complete > NUM_CPUS)
       {
-        load_request_in_memory2++;
-      }
-      else if (type_origin == RFO)
-      {
-        store_request_in_memory2++;
-      }
-      else
-      {
-        printf("%s: Error!\n", __FUNCTION__);
+        if (type_origin == LOAD || type_origin == TRANSLATION)
+        {
+          load_request_in_memory2++;
+        }
+        else if (type_origin == RFO)
+        {
+          store_request_in_memory2++;
+        }
+        else
+        {
+          printf("%s: Error!\n", __FUNCTION__);
+        }
       }
 #endif // TRACKING_LOAD_STORE_STATISTICS
     }
@@ -683,11 +697,11 @@ int MEMORY_CONTROLLER<T, T2>::add_wq(PACKET* packet)
 {
   const static uint8_t type = 2;  // it means the input request is write request.
 
-#if (MEMORY_USE_OS_TRANSPARENT_MANAGEMENT == ENABLE && IDEAL_SINGLE_MEMPOD == ENABLE)
+#if (MEMORY_USE_OS_TRANSPARENT_MANAGEMENT == ENABLE)
 #else
   if (all_warmup_complete < NUM_CPUS)
     return int(ReturnValue::Forward); // Fast-forward
-#endif // MEMORY_USE_OS_TRANSPARENT_MANAGEMENT, IDEAL_SINGLE_MEMPOD
+#endif // MEMORY_USE_OS_TRANSPARENT_MANAGEMENT
 
   /* Operate research proposals below */
 #if (MEMORY_USE_OS_TRANSPARENT_MANAGEMENT == ENABLE)
@@ -699,10 +713,12 @@ int MEMORY_CONTROLLER<T, T2>::add_wq(PACKET* packet)
 #endif  // TRACKING_LOAD_STORE_STATISTICS
 #endif  // MEMORY_USE_OS_TRANSPARENT_MANAGEMENT
 
+/* Disable Warmup Fast-Forward
 #if (IDEAL_SINGLE_MEMPOD == ENABLE)
   if (all_warmup_complete < NUM_CPUS)
     return int(ReturnValue::Forward); // Fast-forward
 #endif // IDEAL_SINGLE_MEMPOD
+*/
 
 #if (MEMORY_USE_SWAPPING_UNIT == ENABLE)
   /* Check swapping below */
@@ -770,7 +786,10 @@ int MEMORY_CONTROLLER<T, T2>::add_wq(PACKET* packet)
 
     if (stall == false)
     {
-      write_request_in_memory++;
+      if (all_warmup_complete > NUM_CPUS)
+      {
+        write_request_in_memory++;
+      }
     }
   }
   else if (address < memory.max_address + memory2.max_address)
@@ -781,7 +800,10 @@ int MEMORY_CONTROLLER<T, T2>::add_wq(PACKET* packet)
 
     if (stall == false)
     {
-      write_request_in_memory2++;
+      if (all_warmup_complete > NUM_CPUS)
+      {
+        write_request_in_memory2++;
+      }
     }
   }
   else

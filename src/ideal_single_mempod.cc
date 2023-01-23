@@ -377,7 +377,7 @@ void OS_TRANSPARENT_MANAGEMENT::determine_swap_pair(std::vector<REMAPPING_TABLE_
     std::sort(hot_page_in_fm.begin(),hot_page_in_fm.end());
     std::sort(hot_page_in_sm.begin(),hot_page_in_sm.end());
 
-    for (uint8_t hot_page_in_sm_itr = 0; hot_page_in_sm_itr < hot_page_in_sm.size(); hot_page_in_sm_itr++)
+    for (uint32_t hot_page_in_sm_itr = 0; hot_page_in_sm_itr < hot_page_in_sm.size(); hot_page_in_sm_itr++)
     {   
         while (std::find(hot_page_in_fm.begin(), hot_page_in_fm.end(), swap_fm_address_itr) != hot_page_in_fm.end())
         {

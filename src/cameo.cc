@@ -172,6 +172,14 @@ bool OS_TRANSPARENT_MANAGEMENT::memory_activity_tracking(uint64_t address, uint8
         if (queue_busy_degree <= QUEUE_BUSY_DEGREE_THRESHOLD)
         {
             enqueue_remapping_request(remapping_request);
+
+#if (PRINT_SWAP_DETAIL)
+            if (all_warmup_complete > NUM_CPUS)
+            {
+                swap_enqueued++;
+            }
+#endif
+
         }
     }
 
@@ -286,6 +294,14 @@ bool OS_TRANSPARENT_MANAGEMENT::memory_activity_tracking(uint64_t address, uint8
         if (queue_busy_degree <= QUEUE_BUSY_DEGREE_THRESHOLD)
         {
             enqueue_remapping_request(remapping_request);
+
+#if (PRINT_SWAP_DETAIL)
+            if (all_warmup_complete > NUM_CPUS)
+            {
+                swap_enqueued++;
+            }
+#endif
+
         }
     }
 
@@ -440,7 +456,10 @@ bool OS_TRANSPARENT_MANAGEMENT::enqueue_remapping_request(RemappingRequest& rema
         else
         {
             //std::cout << __func__ << ": remapping_request_queue is full." << std::endl;
-            remapping_request_queue_congestion++;
+            if (all_warmup_complete > NUM_CPUS)
+            {
+                remapping_request_queue_congestion++;
+            }
         }
     }
     else
@@ -450,7 +469,10 @@ bool OS_TRANSPARENT_MANAGEMENT::enqueue_remapping_request(RemappingRequest& rema
 
     // new remapping request is issued.
 #if (PRINT_SWAP_DETAIL)
-    swap_request++;
+    if (all_warmup_complete > NUM_CPUS)
+    {
+        swap_request++;
+    }
 #endif
     return true;
 }

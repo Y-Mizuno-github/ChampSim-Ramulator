@@ -91,9 +91,9 @@ public:
     uint64_t remapping_request_queue_congestion;
 
 #if (PRINT_SWAP_DETAIL)
-    uint32_t swap_request;
-    uint32_t swap_enqueued;
-    uint32_t swap_cancelled;
+    uint64_t swap_request;
+    uint64_t swap_enqueued;
+    uint64_t swap_cancelled;
 #endif // PRINT_SWAP_DETAIL
 
     double interval_cycle;
