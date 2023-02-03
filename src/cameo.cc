@@ -153,7 +153,7 @@ bool OS_TRANSPARENT_MANAGEMENT::memory_activity_tracking(uint64_t address, uint8
         if (fm_remapping_location == remapping_location)    // check
         {
             std::cout << __func__ << ": add new remapping request error 1." << std::endl;
-            printf("line_location_table.at(%ld): %d.\n", line_location_table_index, line_location_table.at(line_location_table_index));
+            printf("line_location_table.at(%ld): %ld.\n", line_location_table_index, line_location_table.at(line_location_table_index));
             printf("remapping_location: %d, fm_remapping_location: %d.\n", remapping_location, fm_remapping_location);
             printf("fm_msb_in_location_table_entry: %d, fm_lsb_in_location_table_entry: %d.\n", fm_msb_in_location_table_entry, fm_lsb_in_location_table_entry);
             printf("msb_in_location_table_entry: %d, lsb_in_location_table_entry: %d.\n", msb_in_location_table_entry, lsb_in_location_table_entry);
@@ -389,7 +389,7 @@ bool OS_TRANSPARENT_MANAGEMENT::finish_remapping_request()
 
             sum_of_remapping_location += get_bits(line_location_table.at(line_location_table_index), msb_in_location_table_entry, lsb_in_location_table_entry);
         }
-        REMAPPING_LOCATION_WIDTH correct_result = REMAPPING_LOCATION_WIDTH(RemappingLocation::Zero) + REMAPPING_LOCATION_WIDTH(RemappingLocation::One) + REMAPPING_LOCATION_WIDTH(RemappingLocation::Two) + REMAPPING_LOCATION_WIDTH(RemappingLocation::Three) + REMAPPING_LOCATION_WIDTH(RemappingLocation::Four);
+        REMAPPING_LOCATION_WIDTH correct_result = REMAPPING_LOCATION_WIDTH(RemappingLocation::Zero) + REMAPPING_LOCATION_WIDTH(RemappingLocation::One) + REMAPPING_LOCATION_WIDTH(RemappingLocation::Two) + REMAPPING_LOCATION_WIDTH(RemappingLocation::Three) + REMAPPING_LOCATION_WIDTH(RemappingLocation::Four) + REMAPPING_LOCATION_WIDTH(RemappingLocation::Five) + REMAPPING_LOCATION_WIDTH(RemappingLocation::Six) + REMAPPING_LOCATION_WIDTH(RemappingLocation::Seven) + REMAPPING_LOCATION_WIDTH(RemappingLocation::Eight);
         
         if (sum_of_remapping_location != correct_result)
         {

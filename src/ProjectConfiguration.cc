@@ -99,7 +99,30 @@ void output_champsim_statistics_initialization(const char* string1, const char* 
     char* string3 = (char*)malloc(strlen(number_workload1) + strlen(number_workload2) + 1 + strlen(file_extension));
     strcpy(string3, number_workload1);
     strcat(string3, number_workload2);
-    strcat(string3, file_extension);
+    strcat(string3, file_extension); 
+
+    //char* string1_2 = (char*)malloc(strlen(string1) + 1);
+    //strcpy(string1_2, string1);
+
+    //const char* delimiter = "/";
+    //char* token;
+    //char* last_token;
+
+    /* get the first token */
+    //token = strtok(string1_2, delimiter);
+
+    /* walk through other tokens */
+    //while (token != NULL)
+    //{
+    //    last_token = token;
+    //    token = strtok(NULL, delimiter);
+    //}
+
+    // append file_extension to string3.
+    //const char* file_extension = ".statistics";
+    //char* string3 = (char*)malloc(strlen(last_token) + 1 + strlen(file_extension));
+    //strcpy(string3, last_token);
+    //strcat(string3, file_extension);
 
     outputchampsimstatistics.trace_file = fopen(string3, "w");
     outputchampsimstatistics.trace_string = (char*)malloc(strlen(string3) + 1);
@@ -224,6 +247,12 @@ void output_champsim_statistics_deinitialization(OutputChampSimStatisticsFileTyp
     fprintf(outputchampsimstatistics.trace_file, "swap_enqueued: %ld \n", outputchampsimstatistics.swap_enqueued);
     fprintf(outputchampsimstatistics.trace_file, "swap_cancelled: %ld \n", outputchampsimstatistics.swap_cancelled);
 #endif
+
+#if (BANDWIDTH_ADAPTIVE_MEMPOD == ENABLE)
+    fprintf(outputchampsimstatistics.trace_file, "mempod_mode normal: %ld \n", outputchampsimstatistics.intervals_normal_mode);
+    fprintf(outputchampsimstatistics.trace_file, "mempod_mode read_only: %ld \n", outputchampsimstatistics.intervals_read_only_mode);
+    fprintf(outputchampsimstatistics.trace_file, "mempod_mode load_only: %ld \n", outputchampsimstatistics.intervals_load_only_mode);
+#endif // BANDWIDTH_ADAPTIVE_MEMPOD
 
     fclose(outputchampsimstatistics.trace_file);
     printf("Output ChampSim statistics into %s.\n", outputchampsimstatistics.trace_string);

@@ -36,7 +36,7 @@
 
 
 /* for mea_counter_table */
-#define NUMBER_MEA_COUNTER              (256u)
+#define NUMBER_MEA_COUNTER              (16u)
 #define MEA_COUNTER_WIDTH               uint8_t
 #define MEA_COUNTER_MAX_VALUE           (4u)
 #define COUNTER_DEFAULT_VALUE           (0)
@@ -47,10 +47,33 @@
 
 /* for swapping */
 #define REMAPPING_REQUEST_QUEUE_LENGTH          (4096)  // 1024/4096
+#define QUEUE_BUSY_DEGREE_THRESHOLD_UP          (0.9f)
+#define QUEUE_BUSY_DEGREE_THRESHOLD_DOWN        (0.8f)
 #define QUEUE_BUSY_DEGREE_THRESHOLD             (0.8f)
 
 #define INCOMPLETE_READ_REQUEST_QUEUE_LENGTH    (128)
 #define INCOMPLETE_WRITE_REQUEST_QUEUE_LENGTH   (128)
+
+/* research proposal */
+#if (BANDWIDTH_ADAPTIVE_MEMPOD == ENABLE)
+#define NORMAL_MODE 0
+#define READ_ONLY_MODE 1
+#define LOAD_ONLY_MODE 2
+#endif // BANDWIDTH_ADAPTIVE_MEMPOD
+
+#if (MEA_UPDATE_USING_LLC == ENABLE)
+#define NORMAL_MODE 0
+#define READ_ONLY_MODE 1
+#define LOAD_ONLY_MODE 2
+#endif // BANDWIDTH_ADAPTIVE_MEMPOD
+
+#if (TRACKING_WEIGHT_MEA == ENABLE)
+#define WEIGHT_LOAD              (4u)
+#define WEIGHT_STORE             (4u)
+#define WEIGHT_WRITE             (1u)
+#undef  MEA_COUNTER_MAX_VALUE
+#define MEA_COUNTER_MAX_VALUE    (WEIGHT_LOAD*4)
+#endif // TRACKING_WEIGHT_MEA
 
 extern uint8_t all_warmup_complete;
 
@@ -96,6 +119,17 @@ public:
     uint64_t swap_cancelled;
 #endif // PRINT_SWAP_DETAIL
 
+#if (BANDWIDTH_ADAPTIVE_MEMPOD == ENABLE)
+    uint8_t mempod_operating_mode;
+    uint64_t mempod_all_counter;
+    uint64_t mempod_read_counter;
+    uint64_t mempod_load_counter;
+    float queue_busy_degree_sum;
+    uint64_t intervals_normal_mode;
+    uint64_t intervals_read_only_mode;
+    uint64_t intervals_load_only_mode;
+#endif // BANDWIDTH_ADAPTIVE_MEMPOD
+
     double interval_cycle;
     double next_interval_cycle;
     uint32_t intervals;
@@ -127,7 +161,13 @@ public:
 private:
     void get_hot_page_from_mea_counter(std::vector<REMAPPING_TABLE_ENTRY_WIDTH>& hot_pages);
     void determine_swap_pair(std::vector<REMAPPING_TABLE_ENTRY_WIDTH>& hot_pages);
+
+#if (TRACKING_WEIGHT_MEA == ENABLE)
+    void update_mea_counter(uint64_t segment_address, uint8_t type_origin);
+#else
     void update_mea_counter(uint64_t segment_address);
+#endif // TRACKING_WEIGHT_MEA
+
     void reset_mea_counter();
     void cancel_not_started_remapping_request(uint8_t swapping_states);
     bool enqueue_remapping_request(RemappingRequest& remapping_request);

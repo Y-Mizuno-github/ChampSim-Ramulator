@@ -25,6 +25,17 @@ OS_TRANSPARENT_MANAGEMENT::OS_TRANSPARENT_MANAGEMENT(uint64_t max_address, uint6
     swap_cancelled = 0;
 #endif // PRINT_SWAP_DETAIL
 
+#if (BANDWIDTH_ADAPTIVE_MEMPOD == ENABLE)
+    mempod_operating_mode = NORMAL_MODE;
+    mempod_all_counter = 0;
+    mempod_read_counter = 0;
+    mempod_load_counter = 0;
+    queue_busy_degree_sum = 0;
+    intervals_normal_mode = 1;
+    intervals_read_only_mode = 0;
+    intervals_load_only_mode = 0;
+#endif // BANDWIDTH_ADAPTIVE_MEMPOD
+
     /* initializing address_remapping_table and invert_address_remapping_table */
     // TODO: I think there is faster way to construct mapping.
 
@@ -52,6 +63,12 @@ OS_TRANSPARENT_MANAGEMENT::~OS_TRANSPARENT_MANAGEMENT()
     outputchampsimstatistics.swap_cancelled = swap_cancelled;
 #endif // PRINT_SWAP_DETAIL
 
+#if (BANDWIDTH_ADAPTIVE_MEMPOD == ENABLE)
+    outputchampsimstatistics.intervals_normal_mode = intervals_normal_mode;
+    outputchampsimstatistics.intervals_read_only_mode = intervals_read_only_mode;
+    outputchampsimstatistics.intervals_load_only_mode = intervals_load_only_mode;
+#endif // BANDWIDTH_ADAPTIVE_MEMPOD
+
     delete& mea_counter_table;
     delete& address_remapping_table;
     delete& invert_address_remapping_table;
@@ -75,6 +92,34 @@ bool OS_TRANSPARENT_MANAGEMENT::memory_activity_tracking(uint64_t address, uint8
     }
 #endif // TRACKING_READ_ONLY
 
+#if (BANDWIDTH_ADAPTIVE_MEMPOD == ENABLE)
+    if (type_origin == LOAD || type_origin == TRANSLATION) // CPU Store Instruction and LLC Writeback is ignored
+    {
+        mempod_load_counter++;
+    }
+    if (type == 1) // CPU Store Instruction and LLC Writeback is ignored
+    {
+        mempod_read_counter++;
+    }
+    mempod_all_counter++;
+    queue_busy_degree_sum += queue_busy_degree;
+
+    if (mempod_operating_mode == READ_ONLY_MODE)
+    {
+        if (type == 2) // Memory Write is ignored
+        {
+            return true;
+        }
+    }
+    else if (mempod_operating_mode == LOAD_ONLY_MODE)
+    {
+        if (type_origin == RFO || type_origin == WRITEBACK) // CPU Store Instruction and LLC Writeback is ignored
+        {
+            return true;
+        }
+    }   
+#endif // BANDWIDTH_ADAPTIVE_MEMPOD
+
     if (address >= total_capacity)
     {
         std::cout << __func__ << ": address input error." << std::endl;
@@ -82,7 +127,11 @@ bool OS_TRANSPARENT_MANAGEMENT::memory_activity_tracking(uint64_t address, uint8
     }
 
     uint64_t data_segment_address = address >> DATA_MANAGEMENT_OFFSET_BITS;   // calculate the data block address
+#if (TRACKING_WEIGHT_MEA == ENABLE)
+    update_mea_counter(data_segment_address,type_origin);
+#else
     update_mea_counter(data_segment_address);
+#endif // TRACKING_WEIGHT_MEA
     return true;
 };
 #else
@@ -100,9 +149,69 @@ bool OS_TRANSPARENT_MANAGEMENT::memory_activity_tracking(uint64_t address, uint8
 };
 #endif
 
+#if (TRACKING_WEIGHT_MEA == ENABLE)
+// debugged
+void OS_TRANSPARENT_MANAGEMENT::update_mea_counter(uint64_t segment_address, uint8_t type_origin)
+{
+    std::deque<REMAPPING_TABLE_ENTRY_WIDTH> data_to_delete;
+    uint8_t increment_value;
+
+    if (type_origin == LOAD || type_origin == TRANSLATION) // CPU Store Instruction and LLC Writeback is ignored
+    {
+        increment_value = WEIGHT_LOAD;
+    }
+    else if (type_origin == RFO) // CPU Store Instruction and LLC Writeback is ignored
+    {
+        increment_value = WEIGHT_STORE;
+    }
+    else
+    {
+        increment_value = WEIGHT_WRITE;
+    }
+
+    if (mea_counter_table.count(segment_address) == 1) // exist
+    {
+        if (mea_counter_table[segment_address] + increment_value <= MEA_COUNTER_MAX_VALUE)
+        {
+            mea_counter_table[segment_address] += increment_value;
+        }
+    }
+    else if (mea_counter_table.count(segment_address) == 0) // not exist
+    {
+        if (mea_counter_table.size() >= NUMBER_MEA_COUNTER) // MEA Counter is full
+        {
+            for (auto mea_itr = mea_counter_table.begin(); mea_itr != mea_counter_table.end(); ++mea_itr)
+            {   
+                if (mea_itr->second > increment_value)
+                {
+                    mea_itr->second -= increment_value;
+                }
+                else
+                {
+                    data_to_delete.push_back(mea_itr->first);
+                }
+            }
+            while (!data_to_delete.empty())
+            {
+                mea_counter_table.erase(data_to_delete.front());
+                data_to_delete.pop_front();
+            }
+        }
+        else // MEA Counter is not full
+        {
+           mea_counter_table[segment_address] = increment_value; 
+        }
+    }
+    else
+    {
+        std::cout << __func__ << ": mea counter error" << std::endl;
+        assert(0);
+    }
+};
+#else 
 // debugged
 void OS_TRANSPARENT_MANAGEMENT::update_mea_counter(uint64_t segment_address)
-{   
+{
     std::deque<REMAPPING_TABLE_ENTRY_WIDTH> data_to_delete;
 
     if (mea_counter_table.count(segment_address) == 1) // exist
@@ -141,6 +250,8 @@ void OS_TRANSPARENT_MANAGEMENT::update_mea_counter(uint64_t segment_address)
         assert(0);
     }
 };
+#endif // TRACKING_WEIGHT_MEA
+
 
 // complete
 void OS_TRANSPARENT_MANAGEMENT::physical_to_hardware_address(PACKET& packet)
@@ -239,6 +350,48 @@ void OS_TRANSPARENT_MANAGEMENT::check_interval_swap(uint8_t swapping_states)
         {
             intervals++;
         }
+
+#if (BANDWIDTH_ADAPTIVE_MEMPOD == ENABLE)
+        if (queue_busy_degree_sum / mempod_all_counter > QUEUE_BUSY_DEGREE_THRESHOLD_UP)
+        {
+            if (mempod_operating_mode == NORMAL_MODE)
+            {
+                mempod_operating_mode = READ_ONLY_MODE;
+            }
+            else if (mempod_operating_mode == READ_ONLY_MODE)
+            {
+                mempod_operating_mode = LOAD_ONLY_MODE;
+            }
+        }
+        else if (queue_busy_degree_sum / mempod_all_counter < QUEUE_BUSY_DEGREE_THRESHOLD_DOWN)
+        {
+            if (mempod_operating_mode == LOAD_ONLY_MODE)
+            {
+                mempod_operating_mode = READ_ONLY_MODE;
+            }
+            else if (mempod_operating_mode == READ_ONLY_MODE)
+            {
+                mempod_operating_mode = NORMAL_MODE;
+            }
+        }
+        queue_busy_degree_sum = 0;
+        mempod_all_counter = 0;
+        mempod_read_counter = 0;
+        mempod_load_counter = 0;
+
+        if (mempod_operating_mode == NORMAL_MODE)
+        {
+            intervals_normal_mode++;
+        }
+        else if (mempod_operating_mode == READ_ONLY_MODE)
+        {
+            intervals_read_only_mode++;
+        }
+        else if (mempod_operating_mode == LOAD_ONLY_MODE)
+        {
+            intervals_load_only_mode++;
+        }
+#endif // BANDWIDTH_ADAPTIVE_MEMPOD
 
 #if(MEA_COUNTER_RESET_EVERY_EPOCH)
         reset_mea_counter();

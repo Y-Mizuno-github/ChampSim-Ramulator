@@ -14,9 +14,9 @@
 #define MEMORY_USE_HYBRID                          (ENABLE) // whether use hybrid memory system instead of single memory systems
 #define PRINT_STATISTICS_INTO_FILE                 (ENABLE) // whether print simulation statistics into files
 #define PRINT_MEMORY_TRACE                         (DISABLE) // whether print memory trace into files
-#define MEMORY_USE_SWAPPING_UNIT                   (DISABLE) // whether memory controller uses swapping unit to swap data (data swapping overhead is considered)
-#define MEMORY_USE_OS_TRANSPARENT_MANAGEMENT       (DISABLE) // whether memory controller uses OS-transparent management designs to simulate the memory system instead of static (no-migration) methods
-#define CPU_USE_MULTIPLE_CORES                     (DISABLE) // whether CPU uses multiple cores to run simulation (go to ./inc/ChampSim/champsim_constants.h to check related parameters)
+#define MEMORY_USE_SWAPPING_UNIT                   (ENABLE) // whether memory controller uses swapping unit to swap data (data swapping overhead is considered)
+#define MEMORY_USE_OS_TRANSPARENT_MANAGEMENT       (ENABLE) // whether memory controller uses OS-transparent management designs to simulate the memory system instead of static (no-migration) methods
+#define CPU_USE_MULTIPLE_CORES                     (ENABLE) // whether CPU uses multiple cores to run simulation (go to ./inc/ChampSim/champsim_constants.h to check related parameters)
 #define PRINT_SWAP_DETAIL                          (ENABLE)
 #define TRACKING_LOAD_STORE_STATISTICS             (ENABLE)
 
@@ -47,8 +47,12 @@
 
 #if (TRACKING_LOAD_STORE_STATISTICS == ENABLE)
 /* Option for research */
-#define TRACKING_LOAD_ONLY                    (DISABLE)
+#define TRACKING_LOAD_ONLY                    (ENABLE)
 #define TRACKING_READ_ONLY                    (DISABLE)
+#if (IDEAL_SINGLE_MEMPOD == ENABLE)
+#define BANDWIDTH_ADAPTIVE_MEMPOD             (DISABLE)
+#define TRACKING_WEIGHT_MEA                   (DISABLE)
+#endif // IDEAL_SINGLE_MEMPOD
 #endif // TRACKING_LOAD_STORE_STATISTICS 
 
 /* for test */
@@ -56,6 +60,7 @@
 
 #if (IDEAL_SINGLE_MEMPOD == ENABLE)
 #define PRINT_SWAPS_PER_EPOCH_MEMPOD          (DISABLE)
+#define MEA_UPDATE_USING_LLC                  (DISABLE)
 #else
 #if (IDEAL_LINE_LOCATION_TABLE == ENABLE) || (COLOCATED_LINE_LOCATION_TABLE == ENABLE)
 #define HOTNESS_THRESHOLD                     (1u)
@@ -221,6 +226,12 @@ typedef struct
     uint64_t swap_enqueued;
     uint64_t swap_cancelled;
 #endif // PRINT_SWAP_DETAIL
+
+#if (BANDWIDTH_ADAPTIVE_MEMPOD == ENABLE)
+    uint64_t intervals_normal_mode;
+    uint64_t intervals_read_only_mode;
+    uint64_t intervals_load_only_mode;
+#endif // BANDWIDTH_ADAPTIVE_MEMPOD
 
 } OutputChampSimStatisticsFileType;
 

@@ -138,7 +138,11 @@
 #define MINOR_FAULT_PENALTY   (200ul)
 
 /* LLC */
+#if (CPU_USE_MULTIPLE_CORES == ENABLE)
+#define LLC_CAPACITY                (2*MB)  // Default: 2 MiB
+#else
 #define LLC_CAPACITY                (1*MB)  // Default: 2 MiB
+#endif // CPU_USE_MULTIPLE_CORES
 #define LLC_WAYS                    (16)
 #define LLC_SETS                    (LLC_CAPACITY / BLOCK_SIZE / LLC_WAYS)
 #define LLC_WQ_SIZE                 (32)

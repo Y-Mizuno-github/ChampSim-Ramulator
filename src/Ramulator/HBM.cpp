@@ -17,6 +17,14 @@ map<string, enum HBM::Org> HBM::org_map = {
     {"HBM_4Gb", HBM::Org::HBM_4Gb},
 };
 
+/*
+map<string, enum HBM::Org> HBM::org_map = {
+    {"HBM_512Mb", HBM::Org::HBM_512Mb},
+    {"HBM_1Gb", HBM::Org::HBM_1Gb},
+    {"HBM_2Gb", HBM::Org::HBM_2Gb},
+    {"HBM_4Gb", HBM::Org::HBM_4Gb},
+};
+*/
 map<string, enum HBM::Speed> HBM::speed_map = {
     {"HBM_1Gbps", HBM::Speed::HBM_1Gbps},
 };
@@ -50,6 +58,7 @@ void HBM::set_rank_number(int rank) {
 
 void HBM::init_speed()
 {
+
     const static int RFC_TABLE[int(Speed::MAX)][int(Org::MAX)] = {
         {55, 80, 130}
     };
@@ -59,6 +68,18 @@ void HBM::init_speed()
     const static int XS_TABLE[int(Speed::MAX)][int(Org::MAX)] = {
         {60, 85, 135}
     };
+
+    /* original
+    const static int RFC_TABLE[int(Speed::MAX)][int(Org::MAX)] = {
+        {38, 55, 80, 130}
+    };
+    const static int REFI1B_TABLE[int(Speed::MAX)][int(Org::MAX)] = {
+        {48, 64, 128, 256}
+    };
+    const static int XS_TABLE[int(Speed::MAX)][int(Org::MAX)] = {
+        {45, 60, 85, 135}
+    };
+    */
 
     int speed = 0, density = 0;
     switch (speed_entry.rate) {
@@ -71,6 +92,22 @@ void HBM::init_speed()
         case 4: density = 2; break;
         default: assert(false);
     }
+
+    /* original
+    int speed = 0, density = 0;
+    switch (speed_entry.rate) {
+        case 1000: speed = 0; break;
+        default: assert(false);
+    };
+    switch (org_entry.size >> 9){
+        case 1: density = 0; break;
+        case 2: density = 1; break;
+        case 4: density = 2; break;
+        case 8: density = 3; break;
+        default: assert(false);
+    }
+    */
+
     speed_entry.nRFC = RFC_TABLE[speed][density];
     speed_entry.nREFI1B = REFI1B_TABLE[speed][density];
     speed_entry.nXS = XS_TABLE[speed][density];

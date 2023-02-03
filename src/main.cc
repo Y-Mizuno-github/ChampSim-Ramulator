@@ -1295,6 +1295,7 @@ template <typename T, typename T2>
 void simulation_run(const Config& configs, Memory<T, Controller>& memory, const Config& configs2, Memory<T2, Controller>& memory2)
 {
   VirtualMemory vmem(memory.max_address + memory2.max_address, PAGE_SIZE, PAGE_TABLE_LEVELS, 1, MINOR_FAULT_PENALTY);
+  printf("fast memory max address: %lu slow memory max address: %lu \n", memory.max_address,memory2.max_address);
 
   std::array<O3_CPU*, NUM_CPUS> ooo_cpu{};
   MEMORY_CONTROLLER<T, T2> memory_controller(MEMORY_CONTROLLER_CLOCK_SCALE, CPU_FREQUENCY / memory.spec->speed_entry.freq, CPU_FREQUENCY / memory2.spec->speed_entry.freq, memory, memory2);
